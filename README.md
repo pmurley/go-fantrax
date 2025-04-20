@@ -20,7 +20,7 @@ IDs to refer to players.
 ### Retrieve Player Info
 This is used to retrieve ADP (Average Draft Pick) info for all players in the specified sport, with
 optional filters.
-- URL: https://www.fantrax.com/fxea/general/getAdp
+- URL: `https://www.fantrax.com/fxea/general/getAdp`
 - Request Parameters:
   - `sport` (required) - one of NFL, MLB, NHL, NBA, NCAAF, NCAAB, PGA, NASCAR, EPL
   - `position` (optional) - standard position abbreviations (e.g. QB, WR for football)
@@ -69,7 +69,7 @@ in a future release.
 package main
 
 import (
-	"github.com/pmurley/go-fantrax"
+	fantrax "github.com/pmurley/go-fantrax"
 	log "github.com/sirupsen/logrus"
 )
 
