@@ -1,4 +1,5 @@
 cmd/
 fantrax-cache/
+.fantrax-cache/
 .idea/
 .vscode/

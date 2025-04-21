@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const CachePath string = "./fantrax-cache"
+const CachePath string = "./.fantrax-cache"
 
 // Client represents a Fantrax API client
 type Client struct {
@@ -18,14 +18,16 @@ type Client struct {
 
 	Cache        *FileCache
 	CacheEnabled bool
+	LeagueId     string
 }
 
 // NewClient creates a new Fantrax API client
-func NewClient(cacheEnabled bool) (*Client, error) {
+func NewClient(leagueId string, cacheEnabled bool) (*Client, error) {
 	client := &Client{
 		BaseURL:      "https://www.fantrax.com/fxea",
 		HTTPClient:   &http.Client{Timeout: 30 * time.Second},
 		CacheEnabled: cacheEnabled,
+		LeagueId:     leagueId,
 	}
 
 	// Initialize cache if enabled

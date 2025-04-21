@@ -29,14 +29,13 @@ type Player struct {
 
 // PlayersResponse represents the response from the getPlayerIds endpoint
 // It's a map of fantraxId to PlayerStatus details
-type PlayersResponse map[string]Player
 
 // GetPlayerIds gets the list of all players in the database for a particular sport
-func (c *Client) GetPlayerIds(sport Sport) (*PlayersResponse, error) {
+func (c *Client) GetPlayerIds(sport Sport) (*map[string]Player, error) {
 	endpoint := "/general/getPlayerIds"
 	params := map[string]string{"sport": string(sport)}
 
-	var results PlayersResponse
+	var results map[string]Player
 	err := c.fetchWithCache(endpoint, params, &results)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get player IDs: %w", err)

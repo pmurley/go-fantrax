@@ -164,6 +164,8 @@ type StandingsTeam struct {
 	Streak        string
 }
 
+////// END RAW, BEGIN PROCESSED //////////
+
 // LeagueStandings represents the processed standings data in an intuitive format
 type LeagueStandings struct {
 	LeagueName  string         `json:"leagueName"`
@@ -190,14 +192,12 @@ type TeamStanding struct {
 	PointsFor     float64 `json:"pointsFor"`
 	PointsAgainst float64 `json:"pointsAgainst"`
 	Streak        string  `json:"streak"`
-	DivisionID    string  `json:"divisionId,omitempty"`
 }
 
 // Division represents a division in the league
 type Division struct {
-	ID    string   `json:"id"`
-	Name  string   `json:"name"`
-	Teams []string `json:"teamIds"` // TeamIDs in this division
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // Matchup represents a single matchup between two teams
@@ -252,9 +252,8 @@ func ProcessStandings(response *StandingsResponse) (*LeagueStandings, error) {
 		}
 
 		divisionMap[tab.ID] = Division{
-			ID:    tab.ID,
-			Name:  tab.Name,
-			Teams: make([]string, 0),
+			ID:   tab.ID,
+			Name: tab.Name,
 		}
 	}
 
@@ -372,7 +371,7 @@ func (c *Client) GetStandings() (*LeagueStandings, error) {
 	var requestPayload = FantraxRequest{
 		Msgs: []FantraxMessage{
 			{
-				Method: "getStandings",
+				Method: "getLiveScoringStats",
 				Data: map[string]string{
 					"leagueId": c.LeagueID,
 				},
