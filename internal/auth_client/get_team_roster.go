@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/pmurley/go-fantrax/models"
 	"io"
 	"net/http"
 

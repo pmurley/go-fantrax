@@ -16,65 +16,27 @@ import (
 )
 
 var relevantCookies = map[string]bool{
-	"AMZN-Token":                true,
-	"FCNEC":                     true,
-	"FX_RM":                     true,
-	"JSESSIONID":                true,
-	"__cf_bm":                   true,
-	"__eoi":                     true,
-	"__gads":                    true,
-	"__gpi":                     true,
-	"__qca":                     true,
-	"_au_1d":                    true,
-	"_cc_id":                    true,
-	"_ga":                       true,
-	"_ga_DM2Q31JXYV":            true,
-	"_ga_FVWZ0RM4DH":            true,
-	"_gat":                      true,
-	"_gcl_au":                   true,
-	"_gid":                      true,
-	"_lc2_fpi":                  true,
-	"_lc2_fpi_meta":             true,
-	"_li_dcdm_c":                true,
-	"_lr_env":                   true,
-	"_lr_env_src_ats":           true,
-	"_lr_geo_location":          true,
-	"_lr_geo_location_state":    true,
-	"_lr_google_env":            true,
-	"_lr_pairId":                true,
-	"_pbjs_userid_consent_data": true,
-	"ccuid":                     true,
-	"cf_clearance":              true,
-	"connectId":                 true,
-	"cto_bundle":                true,
-	"gamera_user_id":            true,
-	"idl_env":                   true,
-	"idl_env_cst":               true,
-	"idl_env_last":              true,
-	"panoramaId":                true,
-	"panoramaIdType":            true,
-	"panoramaId_expiry":         true,
-	"pbjs-unifiedid":            true,
-	"pbjs-unifiedid_cst":        true,
-	"pbjs-unifiedid_last":       true,
-	"pbjs_fabrickId":            true,
-	"pbjs_fabrickId_cst":        true,
-	"ui":                        true,
-	"uig":                       true,
-	"uuid":                      true,
-	"wl":                        true,
+	"FX_RM": true,
 }
 
 const CacheFile string = CacheDir + "/" + ".fantrax_cookie_cache.json"
 
 func GetCookies() (string, error) {
+	// First try environment variable
+	if envCookies := os.Getenv("FANTRAX_COOKIES"); envCookies != "" {
+		log.Info("Found cookies from environment variable")
+		return envCookies, nil
+	}
+
+	// Then try cache file
 	cookies, err := getCookiesFromCache(CacheFile)
 	if err == nil {
 		log.Info("Found cookies from cache")
 		return convertCookiesToString(cookies)
 	}
-	log.Info("Fetching cookies with browser")
 
+	// Finally fall back to browser
+	log.Info("Fetching cookies with browser")
 	cookies, err = GetCookiesWithBrowser(CacheFile)
 	if err != nil {
 		return "", err
