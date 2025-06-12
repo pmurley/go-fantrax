@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/pmurley/go-fantrax/auth_client"
 	"log"
 	"os"
 	"regexp"
 
-	"github.com/pmurley/go-fantrax/internal/auth_client"
 	"github.com/pmurley/go-fantrax/models"
 )
 

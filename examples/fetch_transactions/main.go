@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/pmurley/go-fantrax/auth_client"
+	"github.com/pmurley/go-fantrax/parser"
 	"log"
 	"os"
-
-	"github.com/pmurley/go-fantrax/internal/auth_client"
-	"github.com/pmurley/go-fantrax/internal/parser"
 )
 
 func main() {
