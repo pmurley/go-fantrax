@@ -24,14 +24,14 @@ const CacheFile string = CacheDir + "/" + ".fantrax_cookie_cache.json"
 func GetCookies() (string, error) {
 	// First try environment variable
 	if envCookies := os.Getenv("FANTRAX_COOKIES"); envCookies != "" {
-		log.Info("Found cookies from environment variable")
+		log.Debug("Found cookies from environment variable")
 		return envCookies, nil
 	}
 
 	// Then try cache file
 	cookies, err := getCookiesFromCache(CacheFile)
 	if err == nil {
-		log.Info("Found cookies from cache")
+		log.Debug("Found cookies from cache")
 		return convertCookiesToString(cookies)
 	}
 

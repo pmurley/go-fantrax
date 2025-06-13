@@ -3,3 +3,4 @@ fantrax-cache/
 .fantrax-cache/
 .idea/
 .vscode/
+*.json

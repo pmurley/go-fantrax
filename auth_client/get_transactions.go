@@ -39,7 +39,7 @@ func (c *Client) GetTransactionDetailsHistoryRaw(maxResultsPerPage string) (json
 		"dt":     0,
 		"at":     0,
 		"av":     "0.0",
-		"tz":     "America/Chicago",
+		"tz":     "UTC",
 		"v":      "167.0.1",
 	}
 
@@ -92,7 +92,11 @@ func (c *Client) GetTransactionHistory(maxResultsPerPage string) ([]models.Trans
 	}
 
 	// Convert to simplified transactions
-	transactions, err := parser.ParseTransactions(historyResponse)
+	userTimezone := ""
+	if c.UserInfo != nil {
+		userTimezone = c.UserInfo.Timezone
+	}
+	transactions, err := parser.ParseTransactions(historyResponse, userTimezone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse transactions: %w", err)
 	}
@@ -130,7 +134,11 @@ func (c *Client) GetAllTransactions() ([]models.Transaction, error) {
 		}
 
 		// Convert to simplified transactions
-		transactions, err := parser.ParseTransactions(historyResponse)
+		userTimezone := ""
+		if c.UserInfo != nil {
+			userTimezone = c.UserInfo.Timezone
+		}
+		transactions, err := parser.ParseTransactions(historyResponse, userTimezone)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse transactions page %d: %w", pageNumber, err)
 		}
@@ -192,7 +200,7 @@ func (c *Client) GetTransactionDetailsHistoryFullRaw(req GetTransactionDetailsHi
 		"dt":     0,
 		"at":     0,
 		"av":     "0.0",
-		"tz":     "America/Chicago",
+		"tz":     "UTC",
 		"v":      "167.0.1",
 	}
 
@@ -258,7 +266,11 @@ func (c *Client) GetTrades(maxResultsPerPage string, pageNumber string, executed
 	}
 
 	// Convert to simplified transactions
-	transactions, err := parser.ParseTransactions(historyResponse)
+	userTimezone := ""
+	if c.UserInfo != nil {
+		userTimezone = c.UserInfo.Timezone
+	}
+	transactions, err := parser.ParseTransactions(historyResponse, userTimezone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse trades: %w", err)
 	}
@@ -296,7 +308,11 @@ func (c *Client) GetAllTrades() ([]models.Transaction, error) {
 		}
 
 		// Convert to simplified transactions
-		transactions, err := parser.ParseTransactions(historyResponse)
+		userTimezone := ""
+		if c.UserInfo != nil {
+			userTimezone = c.UserInfo.Timezone
+		}
+		transactions, err := parser.ParseTransactions(historyResponse, userTimezone)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse trades page %d: %w", pageNumber, err)
 		}
@@ -374,7 +390,11 @@ func (c *Client) GetTransactionsPaginated(view string, pageNumber int, maxResult
 	}
 
 	// Convert to simplified transactions
-	transactions, err := parser.ParseTransactions(historyResponse)
+	userTimezone := ""
+	if c.UserInfo != nil {
+		userTimezone = c.UserInfo.Timezone
+	}
+	transactions, err := parser.ParseTransactions(historyResponse, userTimezone)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse transactions page %d: %w", pageNumber, err)
 	}

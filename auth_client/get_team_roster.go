@@ -51,7 +51,7 @@ func (c *Client) GetTeamRosterInfoRaw(period string, teamID string) (*models.Tea
 		"dt":     0,
 		"at":     0,
 		"av":     "0.0",
-		"tz":     "America/Chicago",
+		"tz":     "UTC",
 		"v":      "167.0.1",
 	}
 

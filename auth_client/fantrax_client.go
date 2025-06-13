@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"github.com/pmurley/go-fantrax/models"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -27,15 +29,24 @@ type Client struct {
 	http.Client
 	LeagueID string
 	UseCache bool
+	UserInfo *models.UserInfo
 }
 
-// NewClient creates a new instance of the auth_client
-func NewClient(leagueId string, useCache bool) *Client {
-	return &Client{
+// NewClient creates a new instance of the auth_client and fetches user info
+func NewClient(leagueId string, useCache bool) (*Client, error) {
+	client := &Client{
 		Client:   http.Client{},
 		LeagueID: leagueId,
 		UseCache: useCache,
 	}
+
+	// Fetch user info including timezone data
+	err := client.Login()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user info during client initialization: %w", err)
+	}
+
+	return client, nil
 }
 
 // Do sends an HTTP request and returns an HTTP response
@@ -131,4 +142,73 @@ func hashReadCloser(rc io.ReadCloser) (string, io.ReadCloser, error) {
 	hashStr := hex.EncodeToString(hash[:])
 
 	return hashStr, newReader, nil
+}
+
+// LoginResponse represents the structure of the login API response
+type LoginResponse struct {
+	Responses []struct {
+		Data struct {
+			UserInfo models.UserInfo `json:"userInfo"`
+		} `json:"data"`
+	} `json:"responses"`
+}
+
+// Login calls the login endpoint and stores user info including timezone data
+func (c *Client) Login() error {
+	// Build the request
+	fullRequest := map[string]interface{}{
+		"msgs": []FantraxMessage{
+			{
+				Method: "login",
+				Data:   map[string]interface{}{},
+			},
+		},
+		"uiv":    3,
+		"refUrl": fmt.Sprintf("https://www.fantrax.com/newui/fantasy/miscellaneous.go?leagueId=%s", c.LeagueID),
+		"dt":     0,
+		"at":     0,
+		"av":     "0.0",
+		"tz":     "UTC",
+		"v":      "167.0.1",
+	}
+
+	jsonStr, err := json.Marshal(fullRequest)
+	if err != nil {
+		return fmt.Errorf("failed to marshal login request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", "https://www.fantrax.com/fxpa/req?leagueId="+c.LeagueID, bytes.NewBuffer(jsonStr))
+	if err != nil {
+		return fmt.Errorf("failed to create login request: %w", err)
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send login request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("login API returned non-200 status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read login response body: %w", err)
+	}
+
+	var loginResponse LoginResponse
+	err = json.Unmarshal(body, &loginResponse)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal login response: %w", err)
+	}
+
+	if len(loginResponse.Responses) == 0 {
+		return fmt.Errorf("no responses in login response")
+	}
+
+	// Store the user info in the client
+	c.UserInfo = &loginResponse.Responses[0].Data.UserInfo
+
+	return nil
 }
