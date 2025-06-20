@@ -138,6 +138,7 @@ type TableCell struct {
 type Transaction struct {
 	ID             string    `json:"id"`
 	Type           string    `json:"type"`                   // "CLAIM", "DROP", "TRADE"
+	ClaimType      string    `json:"claimType,omitempty"`    // "FA" (Free Agent) or "WW" (Waiver Wire) for CLAIM transactions
 	TeamName       string    `json:"teamName"`               // For CLAIM/DROP transactions
 	TeamID         string    `json:"teamId"`                 // For CLAIM/DROP transactions
 	FromTeamName   string    `json:"fromTeamName,omitempty"` // For TRADE transactions

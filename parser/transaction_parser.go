@@ -109,6 +109,7 @@ func parseTransactionRow(row models.TransactionRow, userTimezoneOffset string) (
 	tx := models.Transaction{
 		ID:             row.TxSetID,
 		Type:           row.TransactionCode,
+		ClaimType:      row.ClaimType,
 		PlayerName:     row.Scorer.Name,
 		PlayerID:       row.Scorer.ScorerID,
 		PlayerTeam:     row.Scorer.TeamShortName,
