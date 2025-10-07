@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pmurley/go-fantrax/models"
-	"github.com/pmurley/go-fantrax/parser"
 	"io"
 	"net/http"
+
+	"github.com/pmurley/go-fantrax/auth_client/parser"
+	"github.com/pmurley/go-fantrax/models"
 )
 
 // GetTeamRosterInfoRequest represents the request payload for getTeamRosterInfo

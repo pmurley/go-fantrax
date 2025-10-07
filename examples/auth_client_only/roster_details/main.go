@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/pmurley/go-fantrax/auth_client"
 	"log"
 	"os"
 	"regexp"
+
+	"github.com/pmurley/go-fantrax/auth_client"
 
 	"github.com/pmurley/go-fantrax/models"
 )
@@ -24,7 +25,10 @@ func main() {
 	}
 
 	// Create client with caching enabled
-	client := auth_client.NewClient(leagueID, true)
+	client, err := auth_client.NewClient(leagueID, true)
+	if err != nil {
+		log.Fatalf("Failed to create auth client: %v", err)
+	}
 
 	// Example 1: Get my team's roster for current period
 	fmt.Println("=== Fetching My Team's Current Roster ===")

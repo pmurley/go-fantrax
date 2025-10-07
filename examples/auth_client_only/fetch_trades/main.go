@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pmurley/go-fantrax/auth_client"
-	"github.com/pmurley/go-fantrax/parser"
 	"log"
 	"os"
+
+	"github.com/pmurley/go-fantrax/auth_client"
+	"github.com/pmurley/go-fantrax/auth_client/parser"
 )
 
 func main() {
@@ -18,7 +19,10 @@ func main() {
 	}
 
 	// Create an auth client (with caching disabled for fresh data)
-	client := auth_client.NewClient(leagueID, false)
+	client, err := auth_client.NewClient(leagueID, false)
+	if err != nil {
+		log.Fatalf("Failed to create auth client: %v", err)
+	}
 
 	// Fetch trade history
 	fmt.Println("Fetching trade history...")

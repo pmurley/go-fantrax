@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pmurley/go-fantrax/auth_client"
-	"github.com/pmurley/go-fantrax/parser"
 	"log"
 	"os"
+
+	"github.com/pmurley/go-fantrax/auth_client"
+	"github.com/pmurley/go-fantrax/auth_client/parser"
 )
 
 func main() {
@@ -18,7 +19,10 @@ func main() {
 	}
 
 	// Create an auth client (with caching disabled for fresh data)
-	client := auth_client.NewClient(leagueID, false)
+	client, err := auth_client.NewClient(leagueID, false)
+	if err != nil {
+		log.Fatalf("Failed to create auth client: %v", err)
+	}
 
 	// Fetch transaction history
 	fmt.Println("Fetching transaction history...")
@@ -51,7 +55,13 @@ func main() {
 		log.Fatalf("Failed to parse response: %v", err)
 	}
 
-	transactions, err := parser.ParseTransactions(historyResponse)
+	userTimezone := ""
+	if client.UserInfo != nil {
+		userTimezone = client.UserInfo.Timezone
+		fmt.Printf("User timezone: %s (%s)\n", client.UserInfo.TimezoneDisplay, userTimezone)
+	}
+
+	transactions, err := parser.ParseTransactions(historyResponse, userTimezone)
 	if err != nil {
 		log.Fatalf("Failed to parse transactions: %v", err)
 	}
@@ -65,6 +75,23 @@ func main() {
 	fmt.Printf("\nBy Type:\n")
 	for txType, txs := range byType {
 		fmt.Printf("  %s: %d\n", txType, len(txs))
+		// If CLAIM, break down by FA vs WW
+		if txType == "CLAIM" {
+			faCount := 0
+			wwCount := 0
+			for _, tx := range txs {
+				switch tx.ClaimType {
+				case "FA":
+					faCount++
+				case "WW":
+					wwCount++
+				}
+			}
+			if faCount > 0 || wwCount > 0 {
+				fmt.Printf("    - Free Agent (FA): %d\n", faCount)
+				fmt.Printf("    - Waiver Wire (WW): %d\n", wwCount)
+			}
+		}
 	}
 
 	// Group by team
@@ -102,9 +129,11 @@ func main() {
 	}
 	for i := start; i < len(transactions); i++ {
 		tx := transactions[i]
-		fmt.Printf("%d. %s %s %s (%s) - %s",
-			i+1,
-			tx.Type,
+		fmt.Printf("%d. %s", i+1, tx.Type)
+		if tx.Type == "CLAIM" && tx.ClaimType != "" {
+			fmt.Printf(" (%s)", tx.ClaimType)
+		}
+		fmt.Printf(" %s %s (%s) - %s",
 			tx.PlayerName,
 			tx.PlayerPosition,
 			tx.PlayerTeam,
