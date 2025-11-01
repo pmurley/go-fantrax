@@ -21,21 +21,22 @@ func main() {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 
-	// Fetch league info
-	//fmt.Println("Fetching league info...")
-	//leagueInfo, err := client.GetLeagueInfo(leagueID)
-	//if err != nil {
-	//	log.Fatalf("Failed to get league info: %v", err)
-	//}
-
 	rosterInfo, err := client.GetTeamRosters()
 	if err != nil {
 		log.Fatalf("Failed to get team rosters: %v", err)
 	}
 
+	playerIds, err := client.GetPlayerIds(fantrax.MLB)
+	if err != nil {
+		log.Fatalf("Failed to get player IDs: %v", err)
+	}
+
+	fmt.Printf("Total players: %d\n", len(*playerIds))
+
 	for _, roster := range rosterInfo.Rosters {
 		for _, player := range roster.RosterItems {
-			fmt.Printf("Team: %s, PlayerId: %s, Status: %s\n", roster.TeamName, player.ID, player.Status)
+			playerInfo := (*playerIds)[player.ID]
+			fmt.Printf("Name: %s								ID: %s		Team: %s			Status: %s\n", playerInfo.Name, player.ID, roster.TeamName, player.Status)
 		}
 	}
 
