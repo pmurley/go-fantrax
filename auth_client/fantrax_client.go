@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/pmurley/go-fantrax"
 	"github.com/pmurley/go-fantrax/models"
 	log "github.com/sirupsen/logrus"
 	"io"
@@ -211,4 +212,21 @@ func (c *Client) Login() error {
 	c.UserInfo = &loginResponse.Responses[0].Data.UserInfo
 
 	return nil
+}
+
+// GetCurrentPeriod fetches the current scoring period from Fantrax
+// This uses the public API to get the current period number
+func (c *Client) GetCurrentPeriod() (int, error) {
+	// Use the public fantrax client to get rosters which includes the current period
+	publicClient, err := fantrax.NewClient(c.LeagueID, false)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create public client: %w", err)
+	}
+
+	rosters, err := publicClient.GetTeamRosters()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get team rosters: %w", err)
+	}
+
+	return rosters.Period, nil
 }

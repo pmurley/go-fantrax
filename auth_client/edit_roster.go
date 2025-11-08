@@ -300,7 +300,7 @@ type PlayerInfo struct {
 // This method fetches the current roster state from the API.
 //
 // Parameters:
-//   - period: The roster period (week number)
+//   - period: The roster period (week number). Pass 0 to auto-detect the current period.
 //   - teamID: The fantasy team ID to edit (empty string = authenticated user's team)
 //   - adminMode: true = commissioner editing another team, false = user editing own team
 //   - daily: true = daily league, false = weekly league
@@ -308,6 +308,15 @@ type PlayerInfo struct {
 // Best practice: Create editor, make changes, and call Apply() immediately.
 // Do not hold the editor for long periods as roster state may change externally.
 func (c *Client) NewRosterEditor(period int, teamID string, adminMode bool, daily bool) (*RosterEditor, error) {
+	// Auto-detect current period if 0 is passed
+	if period == 0 {
+		currentPeriod, err := c.GetCurrentPeriod()
+		if err != nil {
+			return nil, fmt.Errorf("failed to auto-detect current period: %w", err)
+		}
+		period = currentPeriod
+	}
+
 	// Fetch current roster
 	rawRoster, err := c.GetTeamRosterInfoRaw(fmt.Sprintf("%d", period), teamID)
 	if err != nil {
