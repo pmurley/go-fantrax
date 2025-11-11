@@ -78,10 +78,10 @@ func main() {
 			// Sleep before API call
 			time.Sleep(1 * time.Second)
 
-			// Add player to reserve using convenience function
+			// Add player to minors using convenience function
 			// This automatically detects the current period and appropriate position
 			fmt.Println("Executing commissioner add...")
-			response, err := client.CommissionerAddToReserve(
+			response, err := client.CommissionerAddToMinors(
 				targetTeamID,
 				playerToAddID,
 			)

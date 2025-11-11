@@ -115,17 +115,13 @@ func (r *CreateClaimDropResponse) IsError() bool {
 	return r.Code == "ERROR"
 }
 
-// CommissionerAddToReserve is a convenience function that adds a player to reserve
+// commissionerAddWithStatus is a helper function that adds a player to a team with a specific status
 // without needing to know the current period or the player's eligible positions.
 //
 // This function automatically:
 //   - Fetches the current period
 //   - Determines an appropriate position for the player
-//   - Adds the player to Reserve status
-//
-// Parameters:
-//   - teamID: The fantasy team ID to add the player to
-//   - playerID: The player ID (scorerId) to add
+//   - Adds the player with the specified status
 //
 // The function uses intelligent position selection:
 //   1. First attempts to add as a hitter (Utility position accepts all position players)
@@ -133,9 +129,10 @@ func (r *CreateClaimDropResponse) IsError() bool {
 //   3. Returns an error if neither position works
 //
 // Returns the API response or an error if the request failed.
-func (c *Client) CommissionerAddToReserve(
+func (c *Client) commissionerAddWithStatus(
 	teamID string,
 	playerID string,
+	statusID string,
 ) (*CreateClaimDropResponse, error) {
 	// Get current period
 	period, err := c.GetCurrentPeriod()
@@ -144,7 +141,7 @@ func (c *Client) CommissionerAddToReserve(
 	}
 
 	// Try adding as a hitter first (Utility position accepts all position players)
-	response, err := c.CommissionerAdd(period, teamID, playerID, PosUtil, StatusReserve)
+	response, err := c.CommissionerAdd(period, teamID, playerID, PosUtil, statusID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add player: %w", err)
 	}
@@ -167,7 +164,7 @@ func (c *Client) CommissionerAddToReserve(
 
 		if isEligibilityError {
 			// Try as pitcher (Pitcher position accepts all pitchers)
-			pitcherResponse, pitcherErr := c.CommissionerAdd(period, teamID, playerID, PosP, StatusReserve)
+			pitcherResponse, pitcherErr := c.CommissionerAdd(period, teamID, playerID, PosP, statusID)
 			if pitcherErr != nil {
 				// If the second attempt also has a network error, return that
 				return nil, fmt.Errorf("failed to add player as pitcher: %w", pitcherErr)
@@ -180,6 +177,36 @@ func (c *Client) CommissionerAddToReserve(
 
 	// Return the original response if it wasn't an eligibility error
 	return response, nil
+}
+
+// CommissionerAddToReserve is a convenience function that adds a player to reserve
+// without needing to know the current period or the player's eligible positions.
+//
+// Parameters:
+//   - teamID: The fantasy team ID to add the player to
+//   - playerID: The player ID (scorerId) to add
+//
+// Returns the API response or an error if the request failed.
+func (c *Client) CommissionerAddToReserve(
+	teamID string,
+	playerID string,
+) (*CreateClaimDropResponse, error) {
+	return c.commissionerAddWithStatus(teamID, playerID, StatusReserve)
+}
+
+// CommissionerAddToMinors is a convenience function that adds a player to minors
+// without needing to know the current period or the player's eligible positions.
+//
+// Parameters:
+//   - teamID: The fantasy team ID to add the player to
+//   - playerID: The player ID (scorerId) to add
+//
+// Returns the API response or an error if the request failed.
+func (c *Client) CommissionerAddToMinors(
+	teamID string,
+	playerID string,
+) (*CreateClaimDropResponse, error) {
+	return c.commissionerAddWithStatus(teamID, playerID, StatusMinors)
 }
 
 // CommissionerAdd adds a player to a team's roster (commissioner mode only)
