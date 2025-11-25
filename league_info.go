@@ -4,6 +4,7 @@ import "fmt"
 
 // LeagueInfo represents the response from the getLeagueInfo endpoint
 type LeagueInfo struct {
+	LeagueName     string                  `json:"leagueName"`
 	DraftSettings  DraftSettings           `json:"draftSettings"`
 	Matchups       []MatchupPeriod         `json:"matchups"`
 	RosterInfo     RosterInfo              `json:"rosterInfo"`
