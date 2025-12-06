@@ -201,7 +201,7 @@ func main() {
 			// Drop player using convenience function
 			// This automatically detects the current period
 			fmt.Println("Executing commissioner drop...")
-			response, err := client.CommissionerDropFromRoster(
+			response, err := client.CommissionerDropToWaivers(
 				targetTeamID,
 				playerToDropID,
 			)
@@ -280,7 +280,7 @@ func main() {
 		fmt.Printf("Dropping player %s to restore original roster state...\n", addedPlayerID)
 		time.Sleep(1 * time.Second)
 
-		cleanupResp, err := client.CommissionerDropFromRoster(targetTeamID, addedPlayerID)
+		cleanupResp, err := client.CommissionerDropToWaivers(targetTeamID, addedPlayerID)
 		if err != nil {
 			fmt.Printf("⚠️  Cleanup failed: %v\n", err)
 		} else if cleanupResp.IsSuccess() {

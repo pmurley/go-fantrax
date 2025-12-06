@@ -305,28 +305,48 @@ func (c *Client) CommissionerAdd(
 	return &response, nil
 }
 
-// CommissionerDropFromRoster is a convenience function that drops a player from a roster
+// CommissionerDropToFreeAgent is a convenience function that drops a player to free agency
 // without needing to know the current period.
 //
-// This function automatically fetches the current period and drops the player.
+// This function automatically fetches the current period and drops the player
+// directly to the free agent pool (immediately available for pickup).
 //
 // Parameters:
 //   - teamID: The fantasy team ID to drop the player from
 //   - playerID: The player ID (scorerId) to drop
 //
 // Returns the API response or an error if the request failed.
-func (c *Client) CommissionerDropFromRoster(
+func (c *Client) CommissionerDropToFreeAgent(
 	teamID string,
 	playerID string,
 ) (*CreateClaimDropResponse, error) {
-	// Get current period
 	period, err := c.GetCurrentPeriod()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current period: %w", err)
 	}
+	return c.CommissionerDrop(period, teamID, playerID, false)
+}
 
-	// Drop the player
-	return c.CommissionerDrop(period, teamID, playerID)
+// CommissionerDropToWaivers is a convenience function that drops a player to waivers
+// without needing to know the current period.
+//
+// This function automatically fetches the current period and drops the player
+// to the waiver wire (subject to waiver claims before becoming a free agent).
+//
+// Parameters:
+//   - teamID: The fantasy team ID to drop the player from
+//   - playerID: The player ID (scorerId) to drop
+//
+// Returns the API response or an error if the request failed.
+func (c *Client) CommissionerDropToWaivers(
+	teamID string,
+	playerID string,
+) (*CreateClaimDropResponse, error) {
+	period, err := c.GetCurrentPeriod()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current period: %w", err)
+	}
+	return c.CommissionerDrop(period, teamID, playerID, true)
 }
 
 // CommissionerDrop drops a player from a team's roster (commissioner mode only)
@@ -338,6 +358,7 @@ func (c *Client) CommissionerDropFromRoster(
 //   - period: The roster period (week number) as an integer
 //   - teamID: The fantasy team ID to drop the player from
 //   - playerID: The player ID (scorerId) to drop
+//   - toWaivers: If true, player goes to waivers; if false, player becomes a free agent immediately
 //
 // The transaction date/time is automatically set to the current time in the user's timezone.
 // The function uses hard-coded defaults for experimental/unknown fields.
@@ -347,6 +368,7 @@ func (c *Client) CommissionerDrop(
 	period int,
 	teamID string,
 	playerID string,
+	toWaivers bool,
 ) (*CreateClaimDropResponse, error) {
 
 	// Auto-generate transaction date/time in user's timezone
@@ -359,6 +381,12 @@ func (c *Client) CommissionerDrop(
 		txDateTime = time.Now().In(loc).Format("2006-01-02 15:04:05")
 	} else {
 		txDateTime = time.Now().UTC().Format("2006-01-02 15:04:05")
+	}
+
+	// Determine drop destination status ID
+	dropStatusID := DropToFreeAgent
+	if toWaivers {
+		dropStatusID = DropToWaivers
 	}
 
 	// Build minimal request for drop operation
@@ -375,7 +403,7 @@ func (c *Client) CommissionerDrop(
 		Future:                     true,
 		Override:                   false,
 		AdminModeProcessClaimNow:   true,
-		AdminModeDropToStatusID:    "4", // Status for dropped player
+		AdminModeDropToStatusID:    dropStatusID,
 		DoConfirm:                  false,
 		FAClaimSystem:              "BIDDING",
 	}

@@ -10,12 +10,18 @@ import (
 	"github.com/pmurley/go-fantrax/models"
 )
 
-// Status ID constants
+// Status ID constants (for rostered players)
 const (
 	StatusActive  = "1" // Active roster
 	StatusReserve = "2" // Reserve/Bench
 	StatusIR      = "3" // Injured Reserve
 	StatusMinors  = "9" // Minors
+)
+
+// Drop destination status constants (for commissioner drops)
+const (
+	DropToFreeAgent = "4" // Drop to free agent pool (immediately available)
+	DropToWaivers   = "5" // Drop to waivers (subject to waiver claims)
 )
 
 // Position ID constants - represent slot types, not individual slots
