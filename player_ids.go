@@ -41,5 +41,13 @@ func (c *Client) GetPlayerIds(sport Sport) (*map[string]Player, error) {
 		return nil, fmt.Errorf("failed to get player IDs: %w", err)
 	}
 
+	// Filter out team aggregate records (Team, Team Pitching, Team Hitting)
+	// These records have an empty "team" field since the API uses "teamName" instead
+	for id, player := range results {
+		if player.Team == "" {
+			delete(results, id)
+		}
+	}
+
 	return &results, nil
 }
