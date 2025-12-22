@@ -123,7 +123,7 @@ func (c *Client) ConfirmOrExecuteTeamRosterChangesRaw(
 		"at":     0,
 		"av":     "0.0",
 		"tz":     timezone,
-		"v":      "172.1.0",
+		"v":      "179.0.1",
 	}
 
 	jsonStr, err := json.Marshal(fullRequest)
@@ -231,10 +231,10 @@ func (c *Client) ConfirmOrExecuteTeamRosterChanges(
 // and builds the fieldMap required for ConfirmOrExecuteTeamRosterChanges.
 //
 // Typical workflow:
-//   1. roster := client.GetTeamRosterInfoRaw(period, teamID)
-//   2. fieldMap := BuildFieldMapFromRoster(roster)
-//   3. Modify fieldMap (e.g., fieldMap["playerId"].StID = "2")
-//   4. client.ConfirmOrExecuteTeamRosterChanges(period, teamID, fieldMap, ...)
+//  1. roster := client.GetTeamRosterInfoRaw(period, teamID)
+//  2. fieldMap := BuildFieldMapFromRoster(roster)
+//  3. Modify fieldMap (e.g., fieldMap["playerId"].StID = "2")
+//  4. client.ConfirmOrExecuteTeamRosterChanges(period, teamID, fieldMap, ...)
 //
 // Note: The roster response contains multiple tables (usually one for hitters, one for pitchers).
 // This function processes all tables to build the complete roster.
