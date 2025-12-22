@@ -6,13 +6,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/pmurley/go-fantrax"
-	"github.com/pmurley/go-fantrax/models"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
 	"path"
+
+	"github.com/pmurley/go-fantrax"
+	"github.com/pmurley/go-fantrax/models"
+	log "github.com/sirupsen/logrus"
 )
 
 const CacheDir string = "./.fantrax-cache"
@@ -170,7 +171,7 @@ func (c *Client) Login() error {
 		"at":     0,
 		"av":     "0.0",
 		"tz":     "UTC",
-		"v":      "167.0.1",
+		"v":      "179.0.1",
 	}
 
 	jsonStr, err := json.Marshal(fullRequest)
