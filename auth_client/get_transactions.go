@@ -109,7 +109,6 @@ func (c *Client) GetTransactionHistory(maxResultsPerPage string) ([]models.Trans
 func (c *Client) GetAllTransactions() ([]models.Transaction, error) {
 	var allTransactions []models.Transaction
 	pageNumber := 1
-	var expectedTotal int
 
 	for {
 		// Build request for this page
@@ -144,23 +143,15 @@ func (c *Client) GetAllTransactions() ([]models.Transaction, error) {
 			return nil, fmt.Errorf("failed to parse transactions page %d: %w", pageNumber, err)
 		}
 
-		// Get pagination info and set expected total on first page
+		// Get pagination info
 		if len(historyResponse.Responses) > 0 {
 			pagination := historyResponse.Responses[0].Data.PaginatedResultSet
-			if pageNumber == 1 {
-				expectedTotal = pagination.TotalNumResults
-			}
 
-			// Add transactions, but don't exceed expected total
-			for _, tx := range transactions {
-				if len(allTransactions) >= expectedTotal {
-					break // Stop if we've reached the expected total
-				}
-				allTransactions = append(allTransactions, tx)
-			}
+			// Add all transactions from this page
+			allTransactions = append(allTransactions, transactions...)
 
-			// Check if we have more pages or reached expected total
-			if pageNumber >= pagination.TotalNumPages || len(allTransactions) >= expectedTotal {
+			// Check if we have more pages
+			if pageNumber >= pagination.TotalNumPages {
 				break
 			}
 		} else {
@@ -283,7 +274,6 @@ func (c *Client) GetTrades(maxResultsPerPage string, pageNumber string, executed
 func (c *Client) GetAllTrades() ([]models.Transaction, error) {
 	var allTrades []models.Transaction
 	pageNumber := 1
-	var expectedTotal int
 
 	for {
 		// Build request for this page
@@ -318,23 +308,17 @@ func (c *Client) GetAllTrades() ([]models.Transaction, error) {
 			return nil, fmt.Errorf("failed to parse trades page %d: %w", pageNumber, err)
 		}
 
-		// Get pagination info and set expected total on first page
+		// Get pagination info
 		if len(historyResponse.Responses) > 0 {
 			pagination := historyResponse.Responses[0].Data.PaginatedResultSet
-			if pageNumber == 1 {
-				expectedTotal = pagination.TotalNumResults
-			}
 
-			// Add transactions, but don't exceed expected total
-			for _, tx := range transactions {
-				if len(allTrades) >= expectedTotal {
-					break // Stop if we've reached the expected total
-				}
-				allTrades = append(allTrades, tx)
-			}
+			// Add all transactions from this page
+			// Note: For trades, totalNumResults counts distinct trades, but each trade
+			// may have multiple player rows, so we add all parsed transactions
+			allTrades = append(allTrades, transactions...)
 
-			// Check if we have more pages or reached expected total
-			if pageNumber >= pagination.TotalNumPages || len(allTrades) >= expectedTotal {
+			// Check if we have more pages
+			if pageNumber >= pagination.TotalNumPages {
 				break
 			}
 		} else {
