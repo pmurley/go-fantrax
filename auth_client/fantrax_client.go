@@ -212,6 +212,12 @@ func (c *Client) Login() error {
 	// Store the user info in the client
 	c.UserInfo = &loginResponse.Responses[0].Data.UserInfo
 
+	// Verify authentication succeeded by checking for user data
+	// When auth fails, Fantrax returns HTTP 200 but with no userInfo data
+	if c.UserInfo.UserID == "" {
+		return fmt.Errorf("authentication failed: invalid or expired credentials")
+	}
+
 	return nil
 }
 
