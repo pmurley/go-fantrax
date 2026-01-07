@@ -304,8 +304,8 @@ func ProcessStandings(response *StandingsResponse) (*LeagueStandings, error) {
 
 				standings.Teams = append(standings.Teams, team)
 			}
-		} else if table.TableType == "H2hPointsBased2" {
-			// These are the matchup tables
+		} else if table.TableType == "H2hPointsBased2" || table.TableType == "H2hPointsBased3" {
+			// These are the matchup tables (H2hPointsBased2 for COMBINED view, H2hPointsBased3 for SCHEDULE view)
 			period := 0
 			date := ""
 
@@ -367,13 +367,52 @@ func ProcessStandings(response *StandingsResponse) (*LeagueStandings, error) {
 	return standings, nil
 }
 
-func (c *Client) GetStandings() (*LeagueStandings, error) {
+// StandingsView represents the view parameter for the standings API
+type StandingsView string
+
+const (
+	// StandingsViewCombined returns standings with only recent scoring periods (default)
+	StandingsViewCombined StandingsView = "COMBINED"
+	// StandingsViewSchedule returns all scoring periods with full matchup history
+	StandingsViewSchedule StandingsView = "SCHEDULE"
+	// StandingsViewAll returns standings for all teams
+	StandingsViewAll StandingsView = "ALL"
+	// StandingsViewSeasonStats returns season statistics
+	StandingsViewSeasonStats StandingsView = "SEASON_STATS"
+)
+
+// StandingsOption is a function that modifies standings request options
+type StandingsOption func(*standingsOptions)
+
+type standingsOptions struct {
+	view StandingsView
+}
+
+// WithStandingsView sets the view parameter for the standings request
+func WithStandingsView(view StandingsView) StandingsOption {
+	return func(o *standingsOptions) {
+		o.view = view
+	}
+}
+
+func (c *Client) GetStandings(opts ...StandingsOption) (*LeagueStandings, error) {
+	// Default options
+	options := &standingsOptions{
+		view: StandingsViewCombined,
+	}
+
+	// Apply provided options
+	for _, opt := range opts {
+		opt(options)
+	}
+
 	var requestPayload = FantraxRequest{
 		Msgs: []FantraxMessage{
 			{
-				Method: "getLiveScoringStats",
+				Method: "getStandings",
 				Data: map[string]string{
 					"leagueId": c.LeagueID,
+					"view":     string(options.view),
 				},
 			},
 		},
