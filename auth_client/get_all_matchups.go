@@ -72,9 +72,11 @@ func (c *Client) GetAllMatchups() (*AllMatchupsResult, error) {
 		Teams:    responseData.FantasyTeamInfo,
 	}
 
-	// Process all matchup tables (H2hPointsBased3 from SCHEDULE view)
+	// Process all matchup tables from SCHEDULE view.
+	// Completed matchups use H2hPointsBased3 with 8 cells (pts/adj/total split out).
+	// Future/unplayed matchups use H2hPointsBased2 with 4 cells (team/score pairs).
 	for _, table := range responseData.TableList {
-		if table.TableType != "H2hPointsBased3" {
+		if table.TableType != "H2hPointsBased3" && table.TableType != "H2hPointsBased2" {
 			continue
 		}
 
@@ -89,41 +91,66 @@ func (c *Client) GetAllMatchups() (*AllMatchupsResult, error) {
 			}
 		}
 
-		// Extract date from subCaption (e.g., "(Sat Apr 19, 2025)")
+		// Extract date from subCaption.
+		// Single day: "(Sat Apr 19, 2025)"
+		// Multi-day:  "(Wed Mar 25, 2026 - Thu Mar 26, 2026)"
 		if len(table.SubCaption) > 2 {
 			date = strings.Trim(table.SubCaption, "()")
+			// For multi-day periods, use the first date
+			if idx := strings.Index(date, " - "); idx > 0 {
+				date = date[:idx]
+			}
 		}
 
 		for _, row := range table.Rows {
-			if len(row.Cells) < 8 {
+			var matchup Matchup
+
+			if len(row.Cells) >= 8 {
+				// Completed matchup format: 8 cells
+				// [awayTeam, awayPts, awayAdj, awayTotal, homeTeam, homePts, homeAdj, homeTotal]
+				awayPoints, _ := strconv.ParseFloat(row.Cells[1].Content, 64)
+				awayAdj, _ := strconv.ParseFloat(row.Cells[2].Content, 64)
+				awayTotal, _ := strconv.ParseFloat(row.Cells[3].Content, 64)
+				homePoints, _ := strconv.ParseFloat(row.Cells[5].Content, 64)
+				homeAdj, _ := strconv.ParseFloat(row.Cells[6].Content, 64)
+				homeTotal, _ := strconv.ParseFloat(row.Cells[7].Content, 64)
+
+				matchup = Matchup{
+					ScoringPeriod: period,
+					Date:          date,
+					AwayTeam: MatchTeam{
+						TeamID:     row.Cells[0].TeamID,
+						Points:     awayPoints,
+						Adjustment: awayAdj,
+						Total:      awayTotal,
+					},
+					HomeTeam: MatchTeam{
+						TeamID:     row.Cells[4].TeamID,
+						Points:     homePoints,
+						Adjustment: homeAdj,
+						Total:      homeTotal,
+					},
+				}
+			} else if len(row.Cells) >= 4 {
+				// Future/unplayed matchup format: 4 cells
+				// [awayTeam, awayScore, homeTeam, homeScore]
+				awayTotal, _ := strconv.ParseFloat(row.Cells[1].Content, 64)
+				homeTotal, _ := strconv.ParseFloat(row.Cells[3].Content, 64)
+
+				matchup = Matchup{
+					ScoringPeriod: period,
+					Date:          date,
+					AwayTeam: MatchTeam{
+						TeamID: row.Cells[0].TeamID,
+						Total:  awayTotal,
+					},
+					HomeTeam: MatchTeam{
+						TeamID: row.Cells[2].TeamID,
+						Total:  homeTotal,
+					},
+				}
+			} else {
 				continue
-			}
-
-			awayTeamID := row.Cells[0].TeamID
-			awayPoints, _ := strconv.ParseFloat(row.Cells[1].Content, 64)
-			awayAdj, _ := strconv.ParseFloat(row.Cells[2].Content, 64)
-			awayTotal, _ := strconv.ParseFloat(row.Cells[3].Content, 64)
-
-			homeTeamID := row.Cells[4].TeamID
-			homePoints, _ := strconv.ParseFloat(row.Cells[5].Content, 64)
-			homeAdj, _ := strconv.ParseFloat(row.Cells[6].Content, 64)
-			homeTotal, _ := strconv.ParseFloat(row.Cells[7].Content, 64)
-
-			matchup := Matchup{
-				ScoringPeriod: period,
-				Date:          date,
-				AwayTeam: MatchTeam{
-					TeamID:     awayTeamID,
-					Points:     awayPoints,
-					Adjustment: awayAdj,
-					Total:      awayTotal,
-				},
-				HomeTeam: MatchTeam{
-					TeamID:     homeTeamID,
-					Points:     homePoints,
-					Adjustment: homeAdj,
-					Total:      homeTotal,
-				},
 			}
 
 			result.Matchups = append(result.Matchups, matchup)
