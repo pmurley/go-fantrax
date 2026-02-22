@@ -65,6 +65,7 @@ func (c *Client) CommissionerTrade(
 	period int,
 	items []TradeItem,
 	message string,
+	override bool,
 ) (*CreateTradeResponse, error) {
 	if len(items) == 0 {
 		return nil, fmt.Errorf("at least one trade item is required")
@@ -97,7 +98,7 @@ func (c *Client) CommissionerTrade(
 		Period:       fmt.Sprintf("%d", period),
 		AdminMode:    true,
 		Future:       true,
-		Override:     false,
+		Override:     override,
 		Msg:          message,
 	}
 
