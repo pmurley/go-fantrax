@@ -152,10 +152,83 @@ type Player struct {
 	ShortName             string       `json:"shortName"`
 }
 
+// Icon TypeID constants
+const (
+	// Injury icons
+	IconDayToDay         = "1"  // Day-to-Day injury (tooltip: "<body part> - Day-to-Day")
+	IconInjuredList      = "2"  // Injured List (tooltip: "Injured List - 15-day IL - <body part>" or "60-day IL")
+	IconOutIndefinitely  = "30" // Out indefinitely (tooltip: "<body part> - Out Indefinitely")
+
+	// Player status icons
+	IconFreeAgent        = "3"  // Free agent (not signed to an MLB team)
+	IconMinorLeagues     = "4"  // Currently in the minor leagues
+	IconSuspended        = "6"  // Suspended
+	IconInactive         = "7"  // Inactive or retired
+
+	// News icons (ordered by recency)
+	IconNewsOld          = "8"  // Older news
+	IconNewsRecent       = "9"  // Recent news
+	IconNewsBreaking     = "14" // Breaking / today's news
+
+	// Handedness icons
+	IconBatsLeft         = "16" // Bats left or left-handed pitcher
+	IconBatsRight        = "17" // Bats right or right-handed pitcher
+	IconSwitchHitter     = "18" // Switch hitter
+
+	// Eligibility icons
+	IconMinorsEligible   = "31" // Eligible for minors roster slot
+)
+
 // PlayerIcon represents an icon shown for a player
 type PlayerIcon struct {
 	Tooltip string `json:"tooltip"`
 	TypeID  string `json:"typeId"`
+}
+
+// IsInjury returns true if the icon indicates any injury status (DTD, IL, or Out Indefinitely)
+func (i PlayerIcon) IsInjury() bool {
+	return i.TypeID == IconDayToDay || i.TypeID == IconInjuredList || i.TypeID == IconOutIndefinitely
+}
+
+// IsNews returns true if the icon is a news blurb
+func (i PlayerIcon) IsNews() bool {
+	return i.TypeID == IconNewsOld || i.TypeID == IconNewsRecent || i.TypeID == IconNewsBreaking
+}
+
+// IsHandedness returns true if the icon indicates batting hand or pitching arm
+func (i PlayerIcon) IsHandedness() bool {
+	return i.TypeID == IconBatsLeft || i.TypeID == IconBatsRight || i.TypeID == IconSwitchHitter
+}
+
+// HasIcon returns true if the slice contains an icon with the given TypeID
+func HasIcon(icons []PlayerIcon, typeID string) bool {
+	for _, icon := range icons {
+		if icon.TypeID == typeID {
+			return true
+		}
+	}
+	return false
+}
+
+// HasInjury returns true if any icon in the slice indicates an injury
+func HasInjury(icons []PlayerIcon) bool {
+	for _, icon := range icons {
+		if icon.IsInjury() {
+			return true
+		}
+	}
+	return false
+}
+
+// GetInjuryIcons returns all injury icons from the slice
+func GetInjuryIcons(icons []PlayerIcon) []PlayerIcon {
+	var result []PlayerIcon
+	for _, icon := range icons {
+		if icon.IsInjury() {
+			result = append(result, icon)
+		}
+	}
+	return result
 }
 
 // Cell represents a data cell in the roster table

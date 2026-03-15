@@ -117,6 +117,7 @@ func parseRosterTable(table models.RosterTable) []models.RosterPlayer {
 			URLName:         row.Scorer.URLName,
 			Rookie:          row.Scorer.Rookie,
 			MinorsEligible:  row.Scorer.MinorsEligible,
+			Icons:           row.Scorer.Icons,
 			Status:          mapStatusID(row.StatusID),
 			RosterPosition:  row.PosID,
 			Stats:           &models.PlayerStats{},

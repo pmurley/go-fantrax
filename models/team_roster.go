@@ -36,6 +36,7 @@ type RosterPlayer struct {
 	URLName         string
 	Rookie          bool
 	MinorsEligible  bool
+	Icons           []PlayerIcon // Player icons (injury, news, handedness, etc.)
 	Status          string       // Active, Reserve, etc.
 	RosterPosition  string       // The position they're rostered at
 	Stats           *PlayerStats // Strongly-typed stats (batting or pitching)

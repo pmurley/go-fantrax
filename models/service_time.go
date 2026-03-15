@@ -80,7 +80,7 @@ type ServiceTimeScorer struct {
 	ScorerID       string            `json:"scorerId"`
 	PosShortNames  string            `json:"posShortNames"`
 	Team           bool              `json:"team"`
-	Icons          []ServiceTimeIcon `json:"icons,omitempty"`
+	Icons          []PlayerIcon `json:"icons,omitempty"`
 	Rookie         bool              `json:"rookie"`
 	MinorsEligible bool              `json:"minorsEligible"`
 	PosIDs         []string          `json:"posIds"`
@@ -90,11 +90,6 @@ type ServiceTimeScorer struct {
 	ShortName      string            `json:"shortName"`
 }
 
-// ServiceTimeIcon represents an icon for a player
-type ServiceTimeIcon struct {
-	Tooltip string `json:"tooltip"`
-	TypeID  string `json:"typeId"`
-}
 
 // --- Processed types for clean API ---
 
