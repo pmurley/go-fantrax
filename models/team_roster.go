@@ -2,13 +2,16 @@ package models
 
 // TeamRoster represents a simplified view of a team's roster
 type TeamRoster struct {
-	TeamInfo       TeamInfo
-	ActiveRoster   []RosterPlayer // Status ID "1"
-	ReserveRoster  []RosterPlayer // Status ID "2"
-	InjuredReserve []RosterPlayer // Status ID "3"
-	MinorsRoster   []RosterPlayer // Status ID "9"
-	ClaimBudget    float64
-	LeagueTeams    []FantasyTeam
+	TeamInfo              TeamInfo
+	ActiveRoster          []RosterPlayer // Status ID "1"
+	ReserveRoster         []RosterPlayer // Status ID "2"
+	InjuredReserve        []RosterPlayer // Status ID "3"
+	MinorsRoster          []RosterPlayer // Status ID "9"
+	ClaimBudget           float64
+	LeagueTeams           []FantasyTeam
+	IllegalRoster         bool     // True if the roster is illegal for this period
+	IllegalRosterTitle    string   // Summary message (e.g. "This Team roster for this lineup period is illegal...")
+	IllegalRosterMessages []string // Specific violations (e.g. "The maximum number of 15 active player(s) has been exceeded.")
 }
 
 // TeamInfo contains basic team information

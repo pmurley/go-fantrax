@@ -24,8 +24,8 @@ import (
 // spreadsheetNameOverrides maps team names that differ between the spreadsheet
 // and Fantrax. Key is spreadsheet name, value is Fantrax name.
 var spreadsheetNameOverrides = map[string]string{
-	"Kansas City Monarchs": "Warwick Wombats",
-	"Seattle Weiners":      "Seattle Wieners",
+	"Seattle Weiners":   "Seattle Wieners",
+	"Cedar Bayou Barons": "Cedar Bayou Bruisers",
 }
 
 func main() {
@@ -61,7 +61,7 @@ func main() {
 
 	// ── Step 1: Parse the CSV schedule ──────────────────────────────────
 	fmt.Println("=== Parsing schedule CSV ===")
-	csvSchedule, periodColumns, err := parseScheduleCSV("schedule.csv")
+	csvSchedule, periodColumns, err := parseScheduleCSV("schedule_2026.csv")
 	if err != nil {
 		log.Fatalf("Failed to parse CSV: %v", err)
 	}
@@ -286,16 +286,25 @@ func parseScheduleCSV(path string) (map[string]map[int]scheduleCell, []int, erro
 	return result, periodOrder, nil
 }
 
-// parseCellValue parses "Opponent Name (H)" or "Opponent Name (A)" and returns
-// the opponent name and whether the row's team is home.
+// parseCellValue parses a schedule cell and returns the opponent name and
+// whether the row's team is home. Supports both suffix format "Name (H)"
+// and prefix format "(H)Name".
 func parseCellValue(cell string) (opponentName string, isHome bool, err error) {
+	// Suffix format: "Opponent Name (H)" or "Opponent Name (A)"
 	if strings.HasSuffix(cell, " (H)") {
 		return strings.TrimSuffix(cell, " (H)"), true, nil
 	}
 	if strings.HasSuffix(cell, " (A)") {
 		return strings.TrimSuffix(cell, " (A)"), false, nil
 	}
-	return "", false, fmt.Errorf("cell %q does not end with (H) or (A)", cell)
+	// Prefix format: "(H)Opponent Name" or "(A)Opponent Name"
+	if strings.HasPrefix(cell, "(H)") {
+		return strings.TrimPrefix(cell, "(H)"), true, nil
+	}
+	if strings.HasPrefix(cell, "(A)") {
+		return strings.TrimPrefix(cell, "(A)"), false, nil
+	}
+	return "", false, fmt.Errorf("cell %q does not contain (H) or (A) prefix or suffix", cell)
 }
 
 // resolveTeamName applies name overrides for spreadsheet -> Fantrax mapping.

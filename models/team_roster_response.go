@@ -77,7 +77,9 @@ type Tab struct {
 
 // MiscData contains miscellaneous roster data
 type MiscData struct {
-	MaxActions int `json:"maxActions"`
+	MaxActions            int      `json:"maxActions"`
+	IllegalRosterMsgsTitle string  `json:"illegalRosterMsgsTitle,omitempty"`
+	IllegalRosterMsgsText  []string `json:"illegalRosterMsgsText,omitempty"`
 	SalaryInfo struct {
 		Title string `json:"title"`
 		Info  []struct {

@@ -32,6 +32,13 @@ func ParseTeamRosterResponse(data []byte) (*models.TeamRoster, error) {
 	// Extract claim budget
 	roster.ClaimBudget = extractClaimBudget(rosterData.MiscData)
 
+	// Extract illegal roster info
+	if rosterData.MiscData.IllegalRosterMsgsTitle != "" {
+		roster.IllegalRoster = true
+		roster.IllegalRosterTitle = rosterData.MiscData.IllegalRosterMsgsTitle
+		roster.IllegalRosterMessages = rosterData.MiscData.IllegalRosterMsgsText
+	}
+
 	// Parse roster tables - they are organized by player type, not roster status
 	var allPlayers []models.RosterPlayer
 
