@@ -7,12 +7,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pmurley/go-fantrax/models"
 )
 
 // GetIllegalRosterOverview fetches the commissioner's illegal roster override page
-// and parses it to determine which teams have illegal rosters and for which periods.
+// and parses it to determine which teams have illegal rosters and on which dates.
 // This is a single call that covers all teams in the league.
 func (c *Client) GetIllegalRosterOverview() (*models.IllegalRosterOverview, error) {
 	html, err := c.fetchIllegalRosterHTML()
@@ -59,44 +60,52 @@ func (c *Client) fetchIllegalRosterHTML() (string, error) {
 // parseIllegalRosterOverview parses the HTML from the illegal roster override admin page.
 //
 // The page contains a table (id="tblOv") with:
-//   - Header row: <th> cells where each period has title="(Mon DD, YYYY)" and text content = period number
+//   - Header row: <th> cells where each column has title="(Mon DD, YYYY)" and text content = column number
+//     Note: these column numbers are sequential day indices, NOT scoring period numbers.
 //   - Data rows: one per team, with <td class="name"> containing team name/link,
-//     followed by <td id="{teamId}_{period}" illegal="T"> for illegal periods
+//     followed by <td id="{teamId}_{colNum}" illegal="T"> for illegal dates
 func parseIllegalRosterOverview(html string) (*models.IllegalRosterOverview, error) {
-	overview := &models.IllegalRosterOverview{
-		Periods: make(map[int]string),
-	}
+	overview := &models.IllegalRosterOverview{}
 
-	// Extract period headers: <th class="center" title="(Mar 25, 2026)">1</th>
+	// Extract date headers: <th class="center" title="(Mar 25, 2026)">1</th>
+	// Map column number -> parsed date
+	columnDates := make(map[int]time.Time)
 	headerRe := regexp.MustCompile(`<th[^>]*title="\(([^)]+)\)"[^>]*>(\d+)</th>`)
 	headerMatches := headerRe.FindAllStringSubmatch(html, -1)
 	for _, m := range headerMatches {
-		period, err := strconv.Atoi(m[2])
+		colNum, err := strconv.Atoi(m[2])
 		if err != nil {
 			continue
 		}
-		overview.Periods[period] = m[1]
+		t, err := time.Parse("Jan 2, 2006", m[1])
+		if err != nil {
+			continue
+		}
+		columnDates[colNum] = t
+		overview.Dates = append(overview.Dates, t)
 	}
 
 	// Extract team rows. Each team row has:
 	//   <td class="name"><a href="...;teamId={teamId}">{TeamName}</a></td>
-	//   followed by <td id="{teamId}_{period}" ...> cells, some with illegal="T"
+	//   followed by <td id="{teamId}_{colNum}" ...> cells, some with illegal="T"
 	teamNameRe := regexp.MustCompile(`<td class="name"><a href="[^"]*;teamId=([^"]+)">([^<]+)</a></td>`)
 	teamMatches := teamNameRe.FindAllStringSubmatch(html, -1)
 
-	// Extract all illegal cells: <td id="{teamId}_{period}" ... illegal="T">
+	// Extract all illegal cells: <td id="{teamId}_{colNum}" ... illegal="T">
 	illegalRe := regexp.MustCompile(`<td id="([^"]+)_(\d+)"[^>]*illegal="T"`)
 	illegalMatches := illegalRe.FindAllStringSubmatch(html, -1)
 
-	// Build a set of teamId -> illegal periods
-	illegalMap := make(map[string][]int)
+	// Build a set of teamId -> illegal dates
+	illegalMap := make(map[string][]time.Time)
 	for _, m := range illegalMatches {
 		teamID := m[1]
-		period, err := strconv.Atoi(m[2])
+		colNum, err := strconv.Atoi(m[2])
 		if err != nil {
 			continue
 		}
-		illegalMap[teamID] = append(illegalMap[teamID], period)
+		if date, ok := columnDates[colNum]; ok {
+			illegalMap[teamID] = append(illegalMap[teamID], date)
+		}
 	}
 
 	// Build team entries
@@ -105,9 +114,9 @@ func parseIllegalRosterOverview(html string) (*models.IllegalRosterOverview, err
 		teamName := strings.TrimSpace(m[2])
 
 		team := models.IllegalRosterTeam{
-			TeamID:         teamID,
-			TeamName:       teamName,
-			IllegalPeriods: illegalMap[teamID],
+			TeamID:       teamID,
+			TeamName:     teamName,
+			IllegalDates: illegalMap[teamID],
 		}
 		overview.Teams = append(overview.Teams, team)
 	}

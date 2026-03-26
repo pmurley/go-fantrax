@@ -5,11 +5,14 @@ import (
 )
 
 // IllegalRosterOverview contains the league-wide illegal roster status
-// for all teams across all periods, as returned by the commissioner's
+// for all teams across all dates, as returned by the commissioner's
 // illegal roster override admin page.
+//
+// Note: the Fantrax page shows one column per date, not per scoring period.
+// Multiple dates may fall within the same scoring period.
 type IllegalRosterOverview struct {
-	// Periods maps period number to its date string (e.g., "Mar 25, 2026")
-	Periods map[int]string
+	// Dates lists all dates shown on the page, in column order.
+	Dates []time.Time
 
 	// Teams contains one entry per team in the league
 	Teams []IllegalRosterTeam
@@ -20,74 +23,51 @@ type IllegalRosterTeam struct {
 	TeamID   string
 	TeamName string
 
-	// IllegalPeriods lists the period numbers where this team has an illegal roster
-	IllegalPeriods []int
+	// IllegalDates lists the dates where this team has an illegal roster
+	IllegalDates []time.Time
 }
 
 // HasIllegalRosters returns true if any team in the league has an illegal roster
-// in any period.
+// on any date.
 func (o *IllegalRosterOverview) HasIllegalRosters() bool {
 	for _, team := range o.Teams {
-		if len(team.IllegalPeriods) > 0 {
+		if len(team.IllegalDates) > 0 {
 			return true
 		}
 	}
 	return false
 }
 
-// TeamsWithIllegalRosters returns only the teams that have at least one illegal period.
+// TeamsWithIllegalRosters returns only the teams that have at least one illegal date.
 func (o *IllegalRosterOverview) TeamsWithIllegalRosters() []IllegalRosterTeam {
 	var result []IllegalRosterTeam
 	for _, team := range o.Teams {
-		if len(team.IllegalPeriods) > 0 {
+		if len(team.IllegalDates) > 0 {
 			result = append(result, team)
 		}
 	}
 	return result
 }
 
-// CurrentPeriod returns the period number whose date matches the given time,
-// or the most recent period with a date <= that time. Returns 0 if no period matches.
-// The provided time should already be in the appropriate timezone (e.g., the user's
-// Fantrax timezone via client.UserInfo.Timezone).
-func (o *IllegalRosterOverview) CurrentPeriod(now time.Time) int {
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-
-	bestPeriod := 0
-	var bestDate time.Time
-	for period, dateStr := range o.Periods {
-		// Parse "Mar 25, 2026" format
-		t, err := time.Parse("Jan 2, 2006", dateStr)
-		if err != nil {
-			continue
-		}
-		if t.Equal(today) {
-			return period
-		}
-		if t.Before(today) && t.After(bestDate) {
-			bestDate = t
-			bestPeriod = period
-		}
-	}
-	return bestPeriod
-}
-
-// TeamsWithIllegalRostersForPeriod returns teams that have an illegal roster
-// for the specified period.
-func (o *IllegalRosterOverview) TeamsWithIllegalRostersForPeriod(period int) []IllegalRosterTeam {
+// TeamsWithIllegalRostersForDate returns teams that have an illegal roster
+// on the specified date. Only the date portion (year/month/day) is compared.
+func (o *IllegalRosterOverview) TeamsWithIllegalRostersForDate(date time.Time) []IllegalRosterTeam {
 	var result []IllegalRosterTeam
 	for _, team := range o.Teams {
-		if team.HasIllegalPeriod(period) {
+		if team.IsIllegalOnDate(date) {
 			result = append(result, team)
 		}
 	}
 	return result
 }
 
-// HasIllegalPeriod returns true if the team has an illegal roster for the given period.
-func (t *IllegalRosterTeam) HasIllegalPeriod(period int) bool {
-	for _, p := range t.IllegalPeriods {
-		if p == period {
+// IsIllegalOnDate returns true if the team has an illegal roster on the given date.
+// Only the date portion (year/month/day) is compared.
+func (t *IllegalRosterTeam) IsIllegalOnDate(date time.Time) bool {
+	dy, dm, dd := date.Date()
+	for _, d := range t.IllegalDates {
+		y, m, day := d.Date()
+		if y == dy && m == dm && day == dd {
 			return true
 		}
 	}

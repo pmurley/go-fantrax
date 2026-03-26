@@ -40,12 +40,13 @@ func TestParseIllegalRosterOverview(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Check periods
-	if len(overview.Periods) != 3 {
-		t.Errorf("expected 3 periods, got %d", len(overview.Periods))
+	// Check dates
+	if len(overview.Dates) != 3 {
+		t.Errorf("expected 3 dates, got %d", len(overview.Dates))
 	}
-	if overview.Periods[1] != "Mar 25, 2026" {
-		t.Errorf("expected period 1 = 'Mar 25, 2026', got %q", overview.Periods[1])
+	expectedFirst := time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC)
+	if !overview.Dates[0].Equal(expectedFirst) {
+		t.Errorf("expected first date = %v, got %v", expectedFirst, overview.Dates[0])
 	}
 
 	// Check teams
@@ -53,25 +54,26 @@ func TestParseIllegalRosterOverview(t *testing.T) {
 		t.Errorf("expected 3 teams, got %d", len(overview.Teams))
 	}
 
-	// Team Alpha: illegal in periods 1 and 2
+	// Team Alpha: illegal on Mar 25 and Mar 26
 	alpha := overview.Teams[0]
 	if alpha.TeamID != "team1" || alpha.TeamName != "Team Alpha" {
 		t.Errorf("unexpected team 0: %+v", alpha)
 	}
-	if len(alpha.IllegalPeriods) != 2 {
-		t.Errorf("expected 2 illegal periods for Alpha, got %d", len(alpha.IllegalPeriods))
+	if len(alpha.IllegalDates) != 2 {
+		t.Errorf("expected 2 illegal dates for Alpha, got %d", len(alpha.IllegalDates))
 	}
 
-	// Team Beta: no illegal periods
+	// Team Beta: no illegal dates
 	beta := overview.Teams[1]
-	if len(beta.IllegalPeriods) != 0 {
-		t.Errorf("expected 0 illegal periods for Beta, got %d", len(beta.IllegalPeriods))
+	if len(beta.IllegalDates) != 0 {
+		t.Errorf("expected 0 illegal dates for Beta, got %d", len(beta.IllegalDates))
 	}
 
-	// Team Gamma: illegal in period 3
+	// Team Gamma: illegal on Mar 27
 	gamma := overview.Teams[2]
-	if len(gamma.IllegalPeriods) != 1 || gamma.IllegalPeriods[0] != 3 {
-		t.Errorf("expected illegal period [3] for Gamma, got %v", gamma.IllegalPeriods)
+	mar27 := time.Date(2026, 3, 27, 0, 0, 0, 0, time.UTC)
+	if len(gamma.IllegalDates) != 1 || !gamma.IllegalDates[0].Equal(mar27) {
+		t.Errorf("expected illegal date [Mar 27] for Gamma, got %v", gamma.IllegalDates)
 	}
 
 	// Test helper methods
@@ -84,36 +86,22 @@ func TestParseIllegalRosterOverview(t *testing.T) {
 		t.Errorf("expected 2 teams with illegal rosters, got %d", len(illegal))
 	}
 
-	if !alpha.HasIllegalPeriod(1) {
-		t.Error("expected Alpha to have illegal period 1")
+	mar25 := time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC)
+	if !alpha.IsIllegalOnDate(mar25) {
+		t.Error("expected Alpha to be illegal on Mar 25")
 	}
-	if alpha.HasIllegalPeriod(3) {
-		t.Error("expected Alpha to NOT have illegal period 3")
-	}
-
-	// Test TeamsWithIllegalRostersForPeriod
-	period1Illegal := overview.TeamsWithIllegalRostersForPeriod(1)
-	if len(period1Illegal) != 1 || period1Illegal[0].TeamID != "team1" {
-		t.Errorf("expected only Team Alpha illegal in period 1, got %v", period1Illegal)
-	}
-	period3Illegal := overview.TeamsWithIllegalRostersForPeriod(3)
-	if len(period3Illegal) != 1 || period3Illegal[0].TeamID != "team3" {
-		t.Errorf("expected only Team Gamma illegal in period 3, got %v", period3Illegal)
+	if alpha.IsIllegalOnDate(mar27) {
+		t.Error("expected Alpha to NOT be illegal on Mar 27")
 	}
 
-	// Test CurrentPeriod
-	mar25 := time.Date(2026, 3, 25, 14, 0, 0, 0, time.UTC)
-	if p := overview.CurrentPeriod(mar25); p != 1 {
-		t.Errorf("expected current period 1 on Mar 25, got %d", p)
+	// Test TeamsWithIllegalRostersForDate
+	mar25Illegal := overview.TeamsWithIllegalRostersForDate(mar25)
+	if len(mar25Illegal) != 1 || mar25Illegal[0].TeamID != "team1" {
+		t.Errorf("expected only Team Alpha illegal on Mar 25, got %v", mar25Illegal)
 	}
-	mar26 := time.Date(2026, 3, 26, 8, 0, 0, 0, time.UTC)
-	if p := overview.CurrentPeriod(mar26); p != 2 {
-		t.Errorf("expected current period 2 on Mar 26, got %d", p)
-	}
-	// Date before any period should return 0
-	mar20 := time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC)
-	if p := overview.CurrentPeriod(mar20); p != 0 {
-		t.Errorf("expected current period 0 before season, got %d", p)
+	mar27Illegal := overview.TeamsWithIllegalRostersForDate(mar27)
+	if len(mar27Illegal) != 1 || mar27Illegal[0].TeamID != "team3" {
+		t.Errorf("expected only Team Gamma illegal on Mar 27, got %v", mar27Illegal)
 	}
 }
 
