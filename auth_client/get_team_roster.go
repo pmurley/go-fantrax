@@ -11,25 +11,66 @@ import (
 	"github.com/pmurley/go-fantrax/models"
 )
 
-// GetTeamRosterInfoRequest represents the request payload for getTeamRosterInfo
+// GetTeamRosterInfoRequest represents the request payload for getTeamRosterInfo.
+// ScoringCategoryType and StatsType are optional; when set they switch the
+// response from the default "current daily lineup" to a per-period
+// year-to-date stats view (with columns like GS, fpts, gp). The Fantrax API
+// uses string codes for these — see WithScoringCategoryType / WithStatsType.
 type GetTeamRosterInfoRequest struct {
-	LeagueID string `json:"leagueId"`
-	Reload   string `json:"reload"`
-	Period   string `json:"period"`
-	TeamID   string `json:"teamId,omitempty"`
+	LeagueID            string `json:"leagueId"`
+	Reload              string `json:"reload"`
+	Period              string `json:"period"`
+	TeamID              string `json:"teamId,omitempty"`
+	ScoringCategoryType string `json:"scoringCategoryType,omitempty"`
+	StatsType           string `json:"statsType,omitempty"`
 }
 
-// GetTeamRosterInfoRaw fetches the raw team roster response without parsing
-func (c *Client) GetTeamRosterInfoRaw(period string, teamID string) (*models.TeamRosterResponse, error) {
+// TeamRosterInfoOption configures an optional getTeamRosterInfo request param.
+type TeamRosterInfoOption func(*teamRosterInfoOptions)
+
+type teamRosterInfoOptions struct {
+	scoringCategoryType string
+	statsType           string
+}
+
+// WithScoringCategoryType sets the scoringCategoryType query param. The
+// Fantrax API takes string codes (e.g. "1" for hitting/pitching scoring); the
+// option is intentionally string-typed so callers can pass any value the API
+// accepts without requiring a library update for new codes.
+func WithScoringCategoryType(value string) TeamRosterInfoOption {
+	return func(o *teamRosterInfoOptions) {
+		o.scoringCategoryType = value
+	}
+}
+
+// WithStatsType sets the statsType query param. Like WithScoringCategoryType,
+// this is string-typed; common values include "2" for season YTD stats.
+func WithStatsType(value string) TeamRosterInfoOption {
+	return func(o *teamRosterInfoOptions) {
+		o.statsType = value
+	}
+}
+
+// GetTeamRosterInfoRaw fetches the raw team roster response without parsing.
+// Pass WithScoringCategoryType / WithStatsType options to retrieve per-period
+// YTD stats instead of the default daily lineup view.
+func (c *Client) GetTeamRosterInfoRaw(period string, teamID string, opts ...TeamRosterInfoOption) (*models.TeamRosterResponse, error) {
+	options := &teamRosterInfoOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
 	requestPayload := FantraxRequest{
 		Msgs: []FantraxMessage{
 			{
 				Method: "getTeamRosterInfo",
 				Data: GetTeamRosterInfoRequest{
-					LeagueID: c.LeagueID,
-					Reload:   "1",
-					Period:   period,
-					TeamID:   teamID,
+					LeagueID:            c.LeagueID,
+					Reload:              "1",
+					Period:              period,
+					TeamID:              teamID,
+					ScoringCategoryType: options.scoringCategoryType,
+					StatsType:           options.statsType,
 				},
 			},
 		},
@@ -91,10 +132,12 @@ func (c *Client) GetTeamRosterInfoRaw(period string, teamID string) (*models.Tea
 	return &response, nil
 }
 
-// GetTeamRosterInfo fetches and parses the team roster into a simplified structure
-func (c *Client) GetTeamRosterInfo(period string, teamID string) (*models.TeamRoster, error) {
+// GetTeamRosterInfo fetches and parses the team roster into a simplified
+// structure. Pass WithScoringCategoryType / WithStatsType options to retrieve
+// per-period YTD stats instead of the default daily lineup view.
+func (c *Client) GetTeamRosterInfo(period string, teamID string, opts ...TeamRosterInfoOption) (*models.TeamRoster, error) {
 	// Get the raw response
-	rawResponse, err := c.GetTeamRosterInfoRaw(period, teamID)
+	rawResponse, err := c.GetTeamRosterInfoRaw(period, teamID, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get raw team roster info: %w", err)
 	}
@@ -114,26 +157,30 @@ func (c *Client) GetTeamRosterInfo(period string, teamID string) (*models.TeamRo
 	return roster, nil
 }
 
-// GetCurrentPeriodTeamRosterInfo fetches the team roster for the current period
-func (c *Client) GetCurrentPeriodTeamRosterInfo(teamID string) (*models.TeamRoster, error) {
+// GetCurrentPeriodTeamRosterInfo fetches the team roster for the current period.
+// Accepts the same options as GetTeamRosterInfo.
+func (c *Client) GetCurrentPeriodTeamRosterInfo(teamID string, opts ...TeamRosterInfoOption) (*models.TeamRoster, error) {
 	// Empty string for period will get the current period
-	return c.GetTeamRosterInfo("", teamID)
+	return c.GetTeamRosterInfo("", teamID, opts...)
 }
 
-// GetCurrentPeriodTeamRosterInfoRaw fetches the raw team roster response for the current period
-func (c *Client) GetCurrentPeriodTeamRosterInfoRaw(teamID string) (*models.TeamRosterResponse, error) {
+// GetCurrentPeriodTeamRosterInfoRaw fetches the raw team roster response for
+// the current period. Accepts the same options as GetTeamRosterInfoRaw.
+func (c *Client) GetCurrentPeriodTeamRosterInfoRaw(teamID string, opts ...TeamRosterInfoOption) (*models.TeamRosterResponse, error) {
 	// Empty string for period will get the current period
-	return c.GetTeamRosterInfoRaw("", teamID)
+	return c.GetTeamRosterInfoRaw("", teamID, opts...)
 }
 
-// GetMyTeamRosterInfo fetches the roster for the authenticated user's team
-func (c *Client) GetMyTeamRosterInfo(period string) (*models.TeamRoster, error) {
+// GetMyTeamRosterInfo fetches the roster for the authenticated user's team.
+// Accepts the same options as GetTeamRosterInfo.
+func (c *Client) GetMyTeamRosterInfo(period string, opts ...TeamRosterInfoOption) (*models.TeamRoster, error) {
 	// Empty string for teamID will get the user's own team
-	return c.GetTeamRosterInfo(period, "")
+	return c.GetTeamRosterInfo(period, "", opts...)
 }
 
-// GetMyTeamRosterInfoRaw fetches the raw roster response for the authenticated user's team
-func (c *Client) GetMyTeamRosterInfoRaw(period string) (*models.TeamRosterResponse, error) {
+// GetMyTeamRosterInfoRaw fetches the raw roster response for the authenticated
+// user's team. Accepts the same options as GetTeamRosterInfoRaw.
+func (c *Client) GetMyTeamRosterInfoRaw(period string, opts ...TeamRosterInfoOption) (*models.TeamRosterResponse, error) {
 	// Empty string for teamID will get the user's own team
-	return c.GetTeamRosterInfoRaw(period, "")
+	return c.GetTeamRosterInfoRaw(period, "", opts...)
 }
