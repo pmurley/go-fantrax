@@ -91,6 +91,30 @@ func main() {
 		}
 	}
 
+	// Display pending trades. Multiple PendingTrade entries with the same
+	// TradeID make up one proposed trade — group by TradeID so each proposal
+	// prints as a single block.
+	fmt.Printf("\n--- Pending Trades ---\n")
+	if len(homeInfo.PendingTrades) == 0 {
+		fmt.Println("(none)")
+	} else {
+		grouped := make(map[string][]auth_client.PendingTrade)
+		var order []string
+		for _, t := range homeInfo.PendingTrades {
+			if _, ok := grouped[t.TradeID]; !ok {
+				order = append(order, t.TradeID)
+			}
+			grouped[t.TradeID] = append(grouped[t.TradeID], t)
+		}
+		for _, id := range order {
+			fmt.Printf("Trade %s:\n", id)
+			for _, leg := range grouped[id] {
+				fmt.Printf("  %s (%s): %s -> %s\n",
+					leg.PlayerName, leg.Position, leg.FromTeam, leg.ToTeam)
+			}
+		}
+	}
+
 	// Save to JSON file
 	outputFile := "league_home_info.json"
 	jsonData, err := json.MarshalIndent(homeInfo, "", "  ")
