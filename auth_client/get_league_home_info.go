@@ -24,10 +24,39 @@ type LeagueHomeInfoRawResponseItem struct {
 
 // LeagueHomeInfoRawData contains all the data from the response
 type LeagueHomeInfoRawData struct {
-	Settings     LeagueHomeInfoRawSettings    `json:"settings"`
-	FantasyTeams []LeagueHomeInfoRawTeam      `json:"fantasyTeams"`
-	Standings    LeagueHomeInfoRawStandings   `json:"standings"`
-	Matchups     LeagueHomeInfoRawMatchups    `json:"matchups"`
+	Settings            LeagueHomeInfoRawSettings            `json:"settings"`
+	FantasyTeams        []LeagueHomeInfoRawTeam              `json:"fantasyTeams"`
+	Standings           LeagueHomeInfoRawStandings           `json:"standings"`
+	Matchups            LeagueHomeInfoRawMatchups            `json:"matchups"`
+	PendingTransactions LeagueHomeInfoRawPendingTransactions `json:"pendingTransactions"`
+}
+
+// LeagueHomeInfoRawPendingTransactions contains the pending-trade envelope
+// embedded in the league home info response.
+type LeagueHomeInfoRawPendingTransactions struct {
+	Sets      []LeagueHomeInfoRawPendingSet      `json:"pendingTransactionSets"`
+	ScorerMap map[string]LeagueHomeInfoRawScorer `json:"scorerMap"`
+}
+
+// LeagueHomeInfoRawPendingSet groups one or more pending player moves under a
+// single trade ID. Each set typically corresponds to one proposed trade.
+type LeagueHomeInfoRawPendingSet struct {
+	ID           string                       `json:"id"`
+	Transactions []LeagueHomeInfoRawPendingTx `json:"transactions"`
+}
+
+// LeagueHomeInfoRawPendingTx is a single player move within a pending trade.
+type LeagueHomeInfoRawPendingTx struct {
+	ScorerID     string `json:"scorerId"`
+	SourceTeamID string `json:"sourceTeamId"`
+	DestTeamID   string `json:"destinationTeamId"`
+}
+
+// LeagueHomeInfoRawScorer is the per-player metadata that the pending trade
+// payload references via ScorerID.
+type LeagueHomeInfoRawScorer struct {
+	Name          string `json:"name"`
+	PosShortNames string `json:"posShortNames"`
 }
 
 // LeagueHomeInfoRawSettings contains league settings
@@ -53,7 +82,7 @@ type LeagueHomeInfoRawTeam struct {
 
 // LeagueHomeInfoRawStandings contains standings data
 type LeagueHomeInfoRawStandings struct {
-	Header     []LeagueHomeInfoRawStandingsHeader `json:"header"`
+	Header     []LeagueHomeInfoRawStandingsHeader           `json:"header"`
 	StatsTable []map[string][]LeagueHomeInfoRawStandingsRow `json:"statsTable"`
 }
 
@@ -77,10 +106,10 @@ type LeagueHomeInfoRawStandingsRow struct {
 
 // LeagueHomeInfoRawMatchups contains matchup data
 type LeagueHomeInfoRawMatchups struct {
-	TitlePeriodInfo string                     `json:"titlePeriodInfo"`
-	Games           []LeagueHomeInfoRawGame    `json:"games"`
-	NoMatchupsMsg   string                     `json:"noMatchupsMsg"`
-	Live            bool                       `json:"live"`
+	TitlePeriodInfo string                  `json:"titlePeriodInfo"`
+	Games           []LeagueHomeInfoRawGame `json:"games"`
+	NoMatchupsMsg   string                  `json:"noMatchupsMsg"`
+	Live            bool                    `json:"live"`
 }
 
 // LeagueHomeInfoRawGame contains a single matchup game
@@ -99,10 +128,30 @@ type LeagueHomeInfoRawGame struct {
 
 // LeagueHomeInfo represents the processed league home info
 type LeagueHomeInfo struct {
-	Settings     LeagueSettings         `json:"settings"`
-	Teams        []LeagueTeam           `json:"teams"`
-	Standings    []DivisionStandings    `json:"standings"`
-	Matchups     LeagueMatchups         `json:"matchups"`
+	Settings      LeagueSettings      `json:"settings"`
+	Teams         []LeagueTeam        `json:"teams"`
+	Standings     []DivisionStandings `json:"standings"`
+	Matchups      LeagueMatchups      `json:"matchups"`
+	PendingTrades []PendingTrade      `json:"pendingTrades,omitempty"`
+}
+
+// PendingTrade is a single player move within a pending (proposed but not yet
+// accepted) trade. Multiple PendingTrade entries with the same TradeID make up
+// one proposed trade.
+type PendingTrade struct {
+	// TradeID groups player moves that belong to the same proposed trade.
+	TradeID string `json:"tradeId"`
+	// PlayerName is the display name of the player being moved.
+	PlayerName string `json:"playerName"`
+	// Position is the player's position(s) as displayed by Fantrax (e.g.
+	// "SP", "3B,INF,OF").
+	Position string `json:"position"`
+	// FromTeam is the resolved fantasy team name the player is moving from.
+	// Falls back to the source team ID if the team is not in the team list.
+	FromTeam string `json:"fromTeam"`
+	// ToTeam is the resolved fantasy team name the player is moving to.
+	// Falls back to the destination team ID if the team is not in the team list.
+	ToTeam string `json:"toTeam"`
 }
 
 // LeagueSettings contains league configuration
@@ -128,8 +177,8 @@ type LeagueTeam struct {
 
 // DivisionStandings contains standings for a single division
 type DivisionStandings struct {
-	DivisionName string              `json:"divisionName"`
-	Teams        []TeamStandingRow   `json:"teams"`
+	DivisionName string            `json:"divisionName"`
+	Teams        []TeamStandingRow `json:"teams"`
 }
 
 // TeamStandingRow contains a single team's standings info
@@ -295,5 +344,45 @@ func processLeagueHomeInfo(raw *LeagueHomeInfoRawResponse) (*LeagueHomeInfo, err
 		})
 	}
 
+	// Process pending trades. Each PendingTransactionSet groups one or more
+	// player moves under a single trade ID; flatten into a slice keyed by
+	// TradeID so callers can group or list as needed. Resolve fantasy-team
+	// names through the FantasyTeams list; fall back to the raw team ID if
+	// the team isn't found (defensive — should always resolve).
+	if len(data.PendingTransactions.Sets) > 0 {
+		teamName := func(id string) string {
+			for _, ft := range data.FantasyTeams {
+				if ft.ID == id {
+					return ft.Name
+				}
+			}
+			return id
+		}
+		for _, set := range data.PendingTransactions.Sets {
+			for _, tx := range set.Transactions {
+				scorer := data.PendingTransactions.ScorerMap[tx.ScorerID]
+				result.PendingTrades = append(result.PendingTrades, PendingTrade{
+					TradeID:    set.ID,
+					PlayerName: scorer.Name,
+					Position:   scorer.PosShortNames,
+					FromTeam:   teamName(tx.SourceTeamID),
+					ToTeam:     teamName(tx.DestTeamID),
+				})
+			}
+		}
+	}
+
 	return result, nil
+}
+
+// GetPendingTrades fetches the league home info and returns just the pending
+// trades. Pending trades are proposed but not yet accepted moves; multiple
+// PendingTrade entries with the same TradeID make up one proposed trade. For
+// callers who want the full LeagueHomeInfo, use GetLeagueHomeInfo instead.
+func (c *Client) GetPendingTrades() ([]PendingTrade, error) {
+	info, err := c.GetLeagueHomeInfo()
+	if err != nil {
+		return nil, err
+	}
+	return info.PendingTrades, nil
 }
