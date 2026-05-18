@@ -79,7 +79,7 @@ func (c *Client) GetPlayerPool(opts ...PlayerPoolOption) ([]models.PoolPlayer, e
 		totalPages = data.PaginatedResultSet.TotalNumPages
 
 		// Parse players from this page
-		players, err := parseStatsTable(data.StatsTable)
+		players, err := parseStatsTable(data.StatsTable, buildColumnIndex(data.TableHeader))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse players on page %d: %w", pageNumber, err)
 		}
@@ -162,12 +162,45 @@ func (c *Client) getTimezone() string {
 	return "UTC"
 }
 
+// columnIndex maps a stats-table column identifier to its cell index.
+type columnIndex map[string]int
+
+// buildColumnIndex indexes a player-pool table header by every stable
+// identifier Fantrax exposes (key, sortType, shortName) so cells can be
+// located by name instead of a fragile fixed position. Fantrax varies the
+// column set (e.g. it drops %Drafted/ADP outside the draft season), which
+// previously caused Age and other cells to be silently skipped.
+func buildColumnIndex(h models.TableHeader) columnIndex {
+	idx := make(columnIndex, len(h.Cells)*3)
+	for i, col := range h.Cells {
+		for _, id := range []string{col.Key, col.SortType, col.ShortName} {
+			if id == "" {
+				continue
+			}
+			if _, exists := idx[id]; !exists {
+				idx[id] = i
+			}
+		}
+	}
+	return idx
+}
+
+// find returns the cell index for the first identifier that resolves, or -1.
+func (c columnIndex) find(ids ...string) int {
+	for _, id := range ids {
+		if i, ok := c[id]; ok {
+			return i
+		}
+	}
+	return -1
+}
+
 // parseStatsTable converts raw stats table entries to PoolPlayer structs
-func parseStatsTable(entries []models.StatsTableEntry) ([]models.PoolPlayer, error) {
+func parseStatsTable(entries []models.StatsTableEntry, cols columnIndex) ([]models.PoolPlayer, error) {
 	players := make([]models.PoolPlayer, 0, len(entries))
 
 	for _, entry := range entries {
-		player, err := parseStatsTableEntry(entry)
+		player, err := parseStatsTableEntry(entry, cols)
 		if err != nil {
 			// Log warning but continue with other players
 			continue
@@ -179,7 +212,7 @@ func parseStatsTable(entries []models.StatsTableEntry) ([]models.PoolPlayer, err
 }
 
 // parseStatsTableEntry converts a single stats table entry to a PoolPlayer
-func parseStatsTableEntry(entry models.StatsTableEntry) (models.PoolPlayer, error) {
+func parseStatsTableEntry(entry models.StatsTableEntry, cols columnIndex) (models.PoolPlayer, error) {
 	scorer := entry.Scorer
 	cells := entry.Cells
 
@@ -222,42 +255,68 @@ func parseStatsTableEntry(entry models.StatsTableEntry) (models.PoolPlayer, erro
 		player.Actions = append(player.Actions, action.TypeID)
 	}
 
-	// Parse cells (expected order based on tableHeader)
-	// [0] Rank, [1] Status, [2] Age, [3] Opponent, [4] FPts, [5] FP/G,
-	// [6] %Drafted, [7] ADP, [8] %Rostered, [9] +/-
-	if len(cells) >= 10 {
-		// [0] Rank - already have from scorer.Rank
+	// Parse cells by header-mapped position. Fantrax changes which columns
+	// are present (e.g. %Drafted/ADP only appear during the draft season),
+	// so each cell is located by its column identifier rather than a fixed
+	// index/count. The old fixed `len(cells) >= 10` assumption silently
+	// dropped Age (and every other cell) once Fantrax went to 8 columns.
+	cell := func(ids ...string) (models.StatsTableCell, bool) {
+		i := cols.find(ids...)
+		if i < 0 || i >= len(cells) {
+			return models.StatsTableCell{}, false
+		}
+		return cells[i], true
+	}
 
-		// [1] Status - FA, W, or team abbreviation
-		player.FantasyStatus = cells[1].Content
-		player.FantasyTeamID = cells[1].TeamID
-		player.FantasyTeamName = cells[1].ToolTip
+	// Rank already comes from scorer.Rank.
 
-		// [2] Age
-		if age, err := strconv.Atoi(cells[2].Content); err == nil {
+	// Status - FA, W, or team abbreviation
+	if c, ok := cell("status", "STATUS", "Sta"); ok {
+		player.FantasyStatus = c.Content
+		player.FantasyTeamID = c.TeamID
+		player.FantasyTeamName = c.ToolTip
+	}
+
+	// Age
+	if c, ok := cell("age", "AGE", "Age"); ok {
+		if age, err := strconv.Atoi(strings.TrimSpace(c.Content)); err == nil {
 			player.Age = age
 		}
+	}
 
-		// [3] Next opponent (may contain HTML like "@SF<br/>Wed 8:05PM")
-		player.NextOpponent = stripHTML(cells[3].Content)
+	// Next opponent (may contain HTML like "@SF<br/>Wed 8:05PM")
+	if c, ok := cell("opponent", "Opp"); ok {
+		player.NextOpponent = stripHTML(c.Content)
+	}
 
-		// [4] Fantasy Points
-		player.FantasyPoints = parseFloat(cells[4].Content)
+	// Fantasy Points
+	if c, ok := cell("fpts", "SCORE", "FPts"); ok {
+		player.FantasyPoints = parseFloat(c.Content)
+	}
 
-		// [5] Fantasy Points Per Game
-		player.FantasyPointsPerG = parseFloat(cells[5].Content)
+	// Fantasy Points Per Game
+	if c, ok := cell("fptsPerGame", "FPTS_PER_GAME", "FP/G"); ok {
+		player.FantasyPointsPerG = parseFloat(c.Content)
+	}
 
-		// [6] % Drafted
-		player.PercentDrafted = parseFloat(cells[6].Content)
+	// % Drafted (absent outside draft season)
+	if c, ok := cell("PERCENT_DRAFTED", "%D"); ok {
+		player.PercentDrafted = parseFloat(c.Content)
+	}
 
-		// [7] ADP
-		player.ADP = parseFloat(cells[7].Content)
+	// ADP (absent outside draft season)
+	if c, ok := cell("ADP"); ok {
+		player.ADP = parseFloat(c.Content)
+	}
 
-		// [8] % Rostered (may have % suffix)
-		player.PercentRostered = parsePercentage(cells[8].Content)
+	// % Rostered (may have % suffix)
+	if c, ok := cell("OVERVIEW_PERCENT_OWNED_2", "Ros"); ok {
+		player.PercentRostered = parsePercentage(c.Content)
+	}
 
-		// [9] Roster Change (may have +/- prefix and % suffix)
-		player.RosterChange = parsePercentage(cells[9].Content)
+	// Roster Change (may have +/- prefix and % suffix)
+	if c, ok := cell("OVERVIEW_PLUS_MINUS_PERCENT_OWNED_2", "+/-"); ok {
+		player.RosterChange = parsePercentage(c.Content)
 	}
 
 	return player, nil
