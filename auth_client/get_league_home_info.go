@@ -24,10 +24,10 @@ type LeagueHomeInfoRawResponseItem struct {
 
 // LeagueHomeInfoRawData contains all the data from the response
 type LeagueHomeInfoRawData struct {
-	Settings     LeagueHomeInfoRawSettings    `json:"settings"`
-	FantasyTeams []LeagueHomeInfoRawTeam      `json:"fantasyTeams"`
-	Standings    LeagueHomeInfoRawStandings   `json:"standings"`
-	Matchups     LeagueHomeInfoRawMatchups    `json:"matchups"`
+	Settings     LeagueHomeInfoRawSettings  `json:"settings"`
+	FantasyTeams []LeagueHomeInfoRawTeam    `json:"fantasyTeams"`
+	Standings    LeagueHomeInfoRawStandings `json:"standings"`
+	Matchups     LeagueHomeInfoRawMatchups  `json:"matchups"`
 }
 
 // LeagueHomeInfoRawSettings contains league settings
@@ -53,7 +53,7 @@ type LeagueHomeInfoRawTeam struct {
 
 // LeagueHomeInfoRawStandings contains standings data
 type LeagueHomeInfoRawStandings struct {
-	Header     []LeagueHomeInfoRawStandingsHeader `json:"header"`
+	Header     []LeagueHomeInfoRawStandingsHeader           `json:"header"`
 	StatsTable []map[string][]LeagueHomeInfoRawStandingsRow `json:"statsTable"`
 }
 
@@ -77,10 +77,10 @@ type LeagueHomeInfoRawStandingsRow struct {
 
 // LeagueHomeInfoRawMatchups contains matchup data
 type LeagueHomeInfoRawMatchups struct {
-	TitlePeriodInfo string                     `json:"titlePeriodInfo"`
-	Games           []LeagueHomeInfoRawGame    `json:"games"`
-	NoMatchupsMsg   string                     `json:"noMatchupsMsg"`
-	Live            bool                       `json:"live"`
+	TitlePeriodInfo string                  `json:"titlePeriodInfo"`
+	Games           []LeagueHomeInfoRawGame `json:"games"`
+	NoMatchupsMsg   string                  `json:"noMatchupsMsg"`
+	Live            bool                    `json:"live"`
 }
 
 // LeagueHomeInfoRawGame contains a single matchup game
@@ -99,10 +99,10 @@ type LeagueHomeInfoRawGame struct {
 
 // LeagueHomeInfo represents the processed league home info
 type LeagueHomeInfo struct {
-	Settings     LeagueSettings         `json:"settings"`
-	Teams        []LeagueTeam           `json:"teams"`
-	Standings    []DivisionStandings    `json:"standings"`
-	Matchups     LeagueMatchups         `json:"matchups"`
+	Settings  LeagueSettings      `json:"settings"`
+	Teams     []LeagueTeam        `json:"teams"`
+	Standings []DivisionStandings `json:"standings"`
+	Matchups  LeagueMatchups      `json:"matchups"`
 }
 
 // LeagueSettings contains league configuration
@@ -128,8 +128,8 @@ type LeagueTeam struct {
 
 // DivisionStandings contains standings for a single division
 type DivisionStandings struct {
-	DivisionName string              `json:"divisionName"`
-	Teams        []TeamStandingRow   `json:"teams"`
+	DivisionName string            `json:"divisionName"`
+	Teams        []TeamStandingRow `json:"teams"`
 }
 
 // TeamStandingRow contains a single team's standings info
@@ -168,16 +168,12 @@ type MatchupGame struct {
 
 // GetLeagueHomeInfoRaw fetches the raw league home info response
 func (c *Client) GetLeagueHomeInfoRaw() ([]byte, error) {
-	requestPayload := FantraxRequest{
-		Msgs: []FantraxMessage{
-			{
-				Method: "getLeagueHomeInfo",
-				Data:   map[string]interface{}{},
-			},
-		},
-	}
+	fullRequest := buildFullRequest(
+		[]FantraxMessage{{Method: "getLeagueHomeInfo", Data: map[string]interface{}{}}},
+		fmt.Sprintf("https://www.fantrax.com/fantasy/league/%s/home", c.LeagueID),
+	)
 
-	jsonStr, err := json.Marshal(requestPayload)
+	jsonStr, err := json.Marshal(fullRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request payload: %w", err)
 	}

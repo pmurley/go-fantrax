@@ -41,7 +41,7 @@ func (c *Client) GetTransactionDetailsHistoryRaw(maxResultsPerPage string) (json
 		"at":     0,
 		"av":     "0.0",
 		"tz":     "UTC",
-		"v":      "179.0.1",
+		"v":      fantraxAPIVersion,
 	}
 
 	jsonStr, err := json.Marshal(fullRequest)
@@ -193,7 +193,7 @@ func (c *Client) GetTransactionDetailsHistoryFullRaw(req GetTransactionDetailsHi
 		"at":     0,
 		"av":     "0.0",
 		"tz":     "UTC",
-		"v":      "179.0.1",
+		"v":      fantraxAPIVersion,
 	}
 
 	jsonStr, err := json.Marshal(fullRequest)

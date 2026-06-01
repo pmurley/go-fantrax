@@ -123,7 +123,7 @@ func (c *Client) ConfirmOrExecuteTeamRosterChangesRaw(
 		"at":     0,
 		"av":     "0.0",
 		"tz":     timezone,
-		"v":      "179.0.1",
+		"v":      fantraxAPIVersion,
 	}
 
 	jsonStr, err := json.Marshal(fullRequest)

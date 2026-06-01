@@ -53,7 +53,7 @@ func (c *Client) GetTeamRosterInfoRaw(period string, teamID string) (*models.Tea
 		"at":     0,
 		"av":     "0.0",
 		"tz":     "UTC",
-		"v":      "179.0.1",
+		"v":      fantraxAPIVersion,
 	}
 
 	jsonStr, err := json.Marshal(fullRequest)

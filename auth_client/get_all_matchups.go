@@ -18,19 +18,15 @@ type AllMatchupsResult struct {
 
 // GetAllMatchups returns all matchups for the season using the SCHEDULE view
 func (c *Client) GetAllMatchups() (*AllMatchupsResult, error) {
-	var requestPayload = FantraxRequest{
-		Msgs: []FantraxMessage{
-			{
-				Method: "getStandings",
-				Data: map[string]string{
-					"leagueId": c.LeagueID,
-					"view":     "SCHEDULE",
-				},
-			},
-		},
-	}
+	fullRequest := buildFullRequest(
+		[]FantraxMessage{{
+			Method: "getStandings",
+			Data:   map[string]string{"leagueId": c.LeagueID, "view": "SCHEDULE"},
+		}},
+		fmt.Sprintf("https://www.fantrax.com/fantasy/league/%s/standings", c.LeagueID),
+	)
 
-	jsonStr, err := json.Marshal(requestPayload)
+	jsonStr, err := json.Marshal(fullRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request payload: %w", err)
 	}

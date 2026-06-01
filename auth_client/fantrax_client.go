@@ -34,6 +34,27 @@ type Client struct {
 	UserInfo *models.UserInfo
 }
 
+// fantraxAPIVersion is the client version sent in every /fxpa/req payload.
+// Fantrax validates this server-side and returns STALE_CLIENT (empty responses)
+// when it is outdated. Update here when Fantrax deploys a new version.
+const fantraxAPIVersion = "180.0.0"
+
+// buildFullRequest wraps a msgs slice in the standard Fantrax /fxpa/req envelope.
+// All calls to /fxpa/req must use this wrapper — omitting "v" or using a stale
+// value triggers STALE_CLIENT responses with an empty responses array.
+func buildFullRequest(msgs []FantraxMessage, refUrl string) map[string]interface{} {
+	return map[string]interface{}{
+		"msgs":   msgs,
+		"uiv":    3,
+		"refUrl": refUrl,
+		"dt":     0,
+		"at":     0,
+		"av":     "0.0",
+		"tz":     "UTC",
+		"v":      fantraxAPIVersion,
+	}
+}
+
 // NewClient creates a new instance of the auth_client and fetches user info
 func NewClient(leagueId string, useCache bool) (*Client, error) {
 	client := &Client{
@@ -157,22 +178,10 @@ type LoginResponse struct {
 
 // Login calls the login endpoint and stores user info including timezone data
 func (c *Client) Login() error {
-	// Build the request
-	fullRequest := map[string]interface{}{
-		"msgs": []FantraxMessage{
-			{
-				Method: "login",
-				Data:   map[string]interface{}{},
-			},
-		},
-		"uiv":    3,
-		"refUrl": fmt.Sprintf("https://www.fantrax.com/newui/fantasy/miscellaneous.go?leagueId=%s", c.LeagueID),
-		"dt":     0,
-		"at":     0,
-		"av":     "0.0",
-		"tz":     "UTC",
-		"v":      "179.0.1",
-	}
+	fullRequest := buildFullRequest(
+		[]FantraxMessage{{Method: "login", Data: map[string]interface{}{}}},
+		fmt.Sprintf("https://www.fantrax.com/newui/fantasy/miscellaneous.go?leagueId=%s", c.LeagueID),
+	)
 
 	jsonStr, err := json.Marshal(fullRequest)
 	if err != nil {
