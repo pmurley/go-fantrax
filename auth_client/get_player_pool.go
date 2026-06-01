@@ -117,7 +117,7 @@ func (c *Client) getPlayerPoolPage(statusFilter string, pageNumber int) (*models
 		"at":     0,
 		"av":     "0.0",
 		"tz":     c.getTimezone(),
-		"v":      "179.0.1",
+		"v":      fantraxAPIVersion,
 	}
 
 	jsonStr, err := json.Marshal(fullRequest)

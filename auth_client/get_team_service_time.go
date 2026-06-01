@@ -50,7 +50,7 @@ func (c *Client) GetTeamServiceTimeRaw(teamID string) (*models.ServiceTimeRespon
 		"at":     0,
 		"av":     "0.0",
 		"tz":     "America/Chicago",
-		"v":      "179.0.1",
+		"v":      fantraxAPIVersion,
 	}
 
 	jsonStr, err := json.Marshal(fullRequest)

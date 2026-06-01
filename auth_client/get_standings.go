@@ -406,19 +406,15 @@ func (c *Client) GetStandings(opts ...StandingsOption) (*LeagueStandings, error)
 		opt(options)
 	}
 
-	var requestPayload = FantraxRequest{
-		Msgs: []FantraxMessage{
-			{
-				Method: "getStandings",
-				Data: map[string]string{
-					"leagueId": c.LeagueID,
-					"view":     string(options.view),
-				},
-			},
-		},
-	}
+	fullRequest := buildFullRequest(
+		[]FantraxMessage{{
+			Method: "getStandings",
+			Data:   map[string]string{"leagueId": c.LeagueID, "view": string(options.view)},
+		}},
+		fmt.Sprintf("https://www.fantrax.com/fantasy/league/%s/standings", c.LeagueID),
+	)
 
-	jsonStr, err := json.Marshal(requestPayload)
+	jsonStr, err := json.Marshal(fullRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request payload: %w", err)
 	}
