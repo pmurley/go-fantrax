@@ -34,6 +34,56 @@ type Client struct {
 	UserInfo *models.UserInfo
 }
 
+// fantraxAPIVersion is the client version sent in every /fxpa/req payload.
+// Fantrax validates this server-side and returns STALE_CLIENT (empty responses)
+// when it is outdated. Update here when Fantrax deploys a new version.
+const fantraxAPIVersion = "180.0.0"
+
+// buildFullRequest wraps a msgs slice in the standard Fantrax /fxpa/req envelope.
+// All calls to /fxpa/req must use this wrapper — omitting "v" or using a stale
+// value triggers STALE_CLIENT responses with an empty responses array.
+func buildFullRequest(msgs []FantraxMessage, refUrl string) map[string]interface{} {
+	return map[string]interface{}{
+		"msgs":   msgs,
+		"uiv":    3,
+		"refUrl": refUrl,
+		"dt":     0,
+		"at":     0,
+		"av":     "0.0",
+		"tz":     "UTC",
+		"v":      fantraxAPIVersion,
+	}
+}
+
+// fantraxPageError is the embedded error block Fantrax returns in the JSON body
+// when a request fails (e.g. STALE_CLIENT when the API version is outdated).
+// Fantrax always returns HTTP 200; callers must check the body, not the status.
+type fantraxPageError struct {
+	Code  string `json:"code"`
+	Title string `json:"title"`
+	Text  string `json:"text"`
+}
+
+// readBody reads resp.Body and checks for an embedded Fantrax pageError before
+// returning the bytes. Any method calling /fxpa/req should use this instead of
+// io.ReadAll so API errors surface immediately with a descriptive message rather
+// than as a confusing downstream unmarshal or "no responses" failure.
+func readBody(resp *http.Response) ([]byte, error) {
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var envelope struct {
+		PageError *fantraxPageError `json:"pageError"`
+	}
+	if err := json.Unmarshal(body, &envelope); err == nil {
+		if pe := envelope.PageError; pe != nil && pe.Code != "" {
+			return nil, fmt.Errorf("fantrax API error %s: %s", pe.Code, pe.Text)
+		}
+	}
+	return body, nil
+}
+
 // NewClient creates a new instance of the auth_client and fetches user info
 func NewClient(leagueId string, useCache bool) (*Client, error) {
 	client := &Client{
@@ -157,22 +207,10 @@ type LoginResponse struct {
 
 // Login calls the login endpoint and stores user info including timezone data
 func (c *Client) Login() error {
-	// Build the request
-	fullRequest := map[string]interface{}{
-		"msgs": []FantraxMessage{
-			{
-				Method: "login",
-				Data:   map[string]interface{}{},
-			},
-		},
-		"uiv":    3,
-		"refUrl": fmt.Sprintf("https://www.fantrax.com/newui/fantasy/miscellaneous.go?leagueId=%s", c.LeagueID),
-		"dt":     0,
-		"at":     0,
-		"av":     "0.0",
-		"tz":     "UTC",
-		"v":      "179.0.1",
-	}
+	fullRequest := buildFullRequest(
+		[]FantraxMessage{{Method: "login", Data: map[string]interface{}{}}},
+		fmt.Sprintf("https://www.fantrax.com/newui/fantasy/miscellaneous.go?leagueId=%s", c.LeagueID),
+	)
 
 	jsonStr, err := json.Marshal(fullRequest)
 	if err != nil {
@@ -194,7 +232,7 @@ func (c *Client) Login() error {
 		return fmt.Errorf("login API returned non-200 status code: %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readBody(resp)
 	if err != nil {
 		return fmt.Errorf("failed to read login response body: %w", err)
 	}

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/pmurley/go-fantrax/auth_client/parser"
@@ -53,7 +52,7 @@ func (c *Client) GetTeamRosterInfoRaw(period string, teamID string) (*models.Tea
 		"at":     0,
 		"av":     "0.0",
 		"tz":     "UTC",
-		"v":      "179.0.1",
+		"v":      fantraxAPIVersion,
 	}
 
 	jsonStr, err := json.Marshal(fullRequest)
@@ -77,7 +76,7 @@ func (c *Client) GetTeamRosterInfoRaw(period string, teamID string) (*models.Tea
 		return nil, fmt.Errorf("API returned non-200 status code: %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readBody(resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}

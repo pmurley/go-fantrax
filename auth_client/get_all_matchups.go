@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,19 +17,15 @@ type AllMatchupsResult struct {
 
 // GetAllMatchups returns all matchups for the season using the SCHEDULE view
 func (c *Client) GetAllMatchups() (*AllMatchupsResult, error) {
-	var requestPayload = FantraxRequest{
-		Msgs: []FantraxMessage{
-			{
-				Method: "getStandings",
-				Data: map[string]string{
-					"leagueId": c.LeagueID,
-					"view":     "SCHEDULE",
-				},
-			},
-		},
-	}
+	fullRequest := buildFullRequest(
+		[]FantraxMessage{{
+			Method: "getStandings",
+			Data:   map[string]string{"leagueId": c.LeagueID, "view": "SCHEDULE"},
+		}},
+		fmt.Sprintf("https://www.fantrax.com/fantasy/league/%s/standings", c.LeagueID),
+	)
 
-	jsonStr, err := json.Marshal(requestPayload)
+	jsonStr, err := json.Marshal(fullRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request payload: %w", err)
 	}
@@ -50,7 +45,7 @@ func (c *Client) GetAllMatchups() (*AllMatchupsResult, error) {
 		return nil, fmt.Errorf("API returned non-200 status code: %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readBody(resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
