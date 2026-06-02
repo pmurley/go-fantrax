@@ -2,7 +2,6 @@ package auth_client
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -49,7 +48,7 @@ func (c *Client) fetchIllegalRosterHTML() (string, error) {
 		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readBody(resp)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
