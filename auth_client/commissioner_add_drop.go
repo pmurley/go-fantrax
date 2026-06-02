@@ -110,9 +110,10 @@ func (r *CreateClaimDropResponse) IsSuccess() bool {
 	return r.Code == "EXECUTED"
 }
 
-// IsError returns true if there was an error executing the transaction
+// IsError returns true if there was an error executing the transaction.
+// Fantrax uses "ERROR" for validation failures and "DENIED" for permission/availability issues.
 func (r *CreateClaimDropResponse) IsError() bool {
-	return r.Code == "ERROR"
+	return r.Code == "ERROR" || r.Code == "DENIED"
 }
 
 // commissionerAddWithStatus is a helper function that adds a player to a team with a specific status

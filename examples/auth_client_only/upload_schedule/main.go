@@ -36,7 +36,7 @@ func main() {
 
 	// Parse CLI flags
 	dryRun := false
-	periodStart, periodEnd := 1, 142
+	periodStart, periodEnd := 1, 146
 	for _, arg := range os.Args[1:] {
 		if arg == "--dry-run" {
 			dryRun = true
@@ -61,7 +61,7 @@ func main() {
 
 	// ── Step 1: Parse the CSV schedule ──────────────────────────────────
 	fmt.Println("=== Parsing schedule CSV ===")
-	csvSchedule, periodColumns, err := parseScheduleCSV("schedule_2026.csv")
+	csvSchedule, periodColumns, err := parseScheduleCSV("Schedule 2026 ULB - 2026 Schedule (1).csv")
 	if err != nil {
 		log.Fatalf("Failed to parse CSV: %v", err)
 	}
@@ -268,7 +268,7 @@ func parseScheduleCSV(path string) (map[string]map[int]scheduleCell, []int, erro
 				continue
 			}
 			cell := strings.TrimSpace(rec[col])
-			if cell == "" {
+			if cell == "" || strings.EqualFold(cell, "none") {
 				continue
 			}
 			opponent, isHome, err := parseCellValue(cell)

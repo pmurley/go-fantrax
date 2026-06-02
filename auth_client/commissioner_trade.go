@@ -43,9 +43,10 @@ func (r *CreateTradeResponse) IsSuccess() bool {
 	return r.Code == "EXECUTED"
 }
 
-// IsError returns true if there was an error executing the trade
+// IsError returns true if there was an error executing the trade.
+// Fantrax uses "ERROR" for validation failures and "DENIED" for permission/availability issues.
 func (r *CreateTradeResponse) IsError() bool {
-	return r.Code == "ERROR"
+	return r.Code == "ERROR" || r.Code == "DENIED"
 }
 
 // CommissionerTrade executes a trade between teams (commissioner mode only)
