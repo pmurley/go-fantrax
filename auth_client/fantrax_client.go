@@ -55,6 +55,35 @@ func buildFullRequest(msgs []FantraxMessage, refUrl string) map[string]interface
 	}
 }
 
+// fantraxPageError is the embedded error block Fantrax returns in the JSON body
+// when a request fails (e.g. STALE_CLIENT when the API version is outdated).
+// Fantrax always returns HTTP 200; callers must check the body, not the status.
+type fantraxPageError struct {
+	Code  string `json:"code"`
+	Title string `json:"title"`
+	Text  string `json:"text"`
+}
+
+// readBody reads resp.Body and checks for an embedded Fantrax pageError before
+// returning the bytes. Any method calling /fxpa/req should use this instead of
+// io.ReadAll so API errors surface immediately with a descriptive message rather
+// than as a confusing downstream unmarshal or "no responses" failure.
+func readBody(resp *http.Response) ([]byte, error) {
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var envelope struct {
+		PageError *fantraxPageError `json:"pageError"`
+	}
+	if err := json.Unmarshal(body, &envelope); err == nil {
+		if pe := envelope.PageError; pe != nil && pe.Code != "" {
+			return nil, fmt.Errorf("fantrax API error %s: %s", pe.Code, pe.Text)
+		}
+	}
+	return body, nil
+}
+
 // NewClient creates a new instance of the auth_client and fetches user info
 func NewClient(leagueId string, useCache bool) (*Client, error) {
 	client := &Client{
@@ -203,7 +232,7 @@ func (c *Client) Login() error {
 		return fmt.Errorf("login API returned non-200 status code: %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readBody(resp)
 	if err != nil {
 		return fmt.Errorf("failed to read login response body: %w", err)
 	}
