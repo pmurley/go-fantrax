@@ -37,7 +37,7 @@ type Client struct {
 // fantraxAPIVersion is the client version sent in every /fxpa/req payload.
 // Fantrax validates this server-side and returns STALE_CLIENT (empty responses)
 // when it is outdated. Update here when Fantrax deploys a new version.
-const fantraxAPIVersion = "181.0.0"
+const fantraxAPIVersion = "182.0.0"
 
 // buildFullRequest wraps a msgs slice in the standard Fantrax /fxpa/req envelope.
 // All calls to /fxpa/req must use this wrapper — omitting "v" or using a stale
